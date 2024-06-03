@@ -1,0 +1,74 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             Int              @id @default(autoincrement())
+  username       String
+  chat_id        BigInt           @unique
+  language       String           @default("english")
+  country        String           @default("UK")
+  currency       String           @default("USD")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  Session        Session[]
+  SearchResults  SearchResults[]
+  BookingSession BookingSession[]
+}
+
+model Session {
+  id                      Int     @id @default(autoincrement())
+  departureCity           String?
+  destinationCity         String?
+  departureDate           String?
+  returnDate              String?
+  departureCityPromptId   String?
+  userAnswerId            String?
+  departureCityCode       String?
+  destinationCityCode     String?
+  destinationCityPromptId String?
+  departureDatePromptId   String?
+  returnDatePromptId      String?
+  multicitySearchData     String?
+  bookingMarkdownId       BigInt?
+  language                String  @default("english")
+  one_way_search_state    Boolean @default(false)
+  return_search_state     Boolean @default(false)
+  multi_city_search_state Boolean @default(false)
+  user                    User    @relation(fields: [chat_id], references: [chat_id], onDelete: Cascade)
+  chat_id                 BigInt
+}
+
+model SearchResults {
+  id            Int    @id @default(autoincrement())
+  searchResults String
+  user          User   @relation(fields: [chat_id], references: [chat_id], onDelete: Cascade)
+  chat_id       BigInt
+}
+
+model BookingSession {
+  id                      Int     @id @default(autoincrement())
+  firstName               String?
+  LastName                String?
+  email                   String?
+  searchResultId          String?
+  firstNamePromptId       String?
+  userAnswerId            String?
+  lastNamePromptId        String?
+  emailPromptId           String?
+  bookingDetailMarkdownId String?
+  language                String  @default("english")
+  user                    User    @relation(fields: [chat_id], references: [chat_id], onDelete: Cascade)
+  chat_id                 BigInt
+}
