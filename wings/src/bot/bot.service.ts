@@ -1309,71 +1309,71 @@ export class BotService {
           });
           if (sessionOneWay) {
             const availableFlights =
-              await this.flightBookingService.searchAvailableOneWayFlight({
+              await this.flightSearchService.searchAvailableOneWayFlight({
                 from: sessionOneWay.departureCityCode,
                 to: sessionOneWay.destinationCityCode,
                 date_from: sessionOneWay.departureDate,
                 currency: 'USD',
               });
             if (availableFlights) {
-              console.log(availableFlights.data);
+              console.log(availableFlights);
               return await this.displayFlights(
                 query.message.chat.id,
                 sessionOneWay.language,
                 'oneWayMarkup',
-                availableFlights.data,
-              );
-            }
-          }
-          return;
-
-        case '/searchReturnFlight':
-          const sessionReturn = await this.databaseService.session.findFirst({
-            where: { chat_id: query.message.chat.id },
-          });
-          if (sessionReturn) {
-            const availableFlights =
-              await this.flightBookingService.searchAvailableReturnFlight({
-                from: sessionReturn.departureCityCode,
-                to: sessionReturn.destinationCityCode,
-                date_from: sessionReturn.departureDate,
-                return_from: sessionReturn.returnDate,
-                return_to: sessionReturn.returnDate,
-                currency: 'USD',
-              });
-            if (availableFlights) {
-              return await this.displayFlights(
-                query.message.chat.id,
-                sessionReturn.language,
-                'returnMarkup',
-                availableFlights.data,
-              );
-            }
-          }
-          return;
-
-        case '/searchMultiCityFlight':
-          const sessionMultiCity = await this.databaseService.session.findFirst(
-            {
-              where: { chat_id: query.message.chat.id },
-            },
-          );
-          if (sessionMultiCity) {
-            const availableFlights =
-              await this.flightBookingService.searchAvailableMulticityFlight(
-                JSON.parse(sessionMultiCity.multicitySearchData),
-              );
-            if (availableFlights) {
-              console.log(availableFlights);
-              return await this.displayFlights(
-                query.message.chat.id,
-                sessionMultiCity.language,
-                'multiCityMarkup',
                 availableFlights,
               );
             }
           }
           return;
+
+        // case '/searchReturnFlight':
+        //   const sessionReturn = await this.databaseService.session.findFirst({
+        //     where: { chat_id: query.message.chat.id },
+        //   });
+        //   if (sessionReturn) {
+        //     const availableFlights =
+        //       await this.flightSearchService.searchAvailableReturnFlight({
+        //         from: sessionReturn.departureCityCode,
+        //         to: sessionReturn.destinationCityCode,
+        //         date_from: sessionReturn.departureDate,
+        //         return_from: sessionReturn.returnDate,
+        //         return_to: sessionReturn.returnDate,
+        //         currency: 'USD',
+        //       });
+        //     if (availableFlights) {
+        //       return await this.displayFlights(
+        //         query.message.chat.id,
+        //         sessionReturn.language,
+        //         'returnMarkup',
+        //         availableFlights.data,
+        //       );
+        //     }
+        //   }
+        //   return;
+
+        // case '/searchMultiCityFlight':
+        //   const sessionMultiCity = await this.databaseService.session.findFirst(
+        //     {
+        //       where: { chat_id: query.message.chat.id },
+        //     },
+        //   );
+        //   if (sessionMultiCity) {
+        //     const availableFlights =
+        //       await this.flightSearchService.searchAvailableMulticityFlight(
+        //         JSON.parse(sessionMultiCity.multicitySearchData),
+        //       );
+        //     if (availableFlights) {
+        //       console.log(availableFlights);
+        //       return await this.displayFlights(
+        //         query.message.chat.id,
+        //         sessionMultiCity.language,
+        //         'multiCityMarkup',
+        //         availableFlights,
+        //       );
+        //     }
+        //   }
+        //   return;
 
         default:
           console.log('default');
@@ -1712,4 +1712,72 @@ export class BotService {
       console.log(error);
     }
   }
+
+  displayFlights = async (chatId, language, type, flights) => {
+    try {
+      switch (language) {
+        case 'english':
+          try {
+            console.log(flights);
+            if (flights.length === 0) {
+              const newSearchMarkup = [
+                [
+                  {
+                    text: '🔎 New Search',
+                    callback_data: JSON.stringify({
+                      command: '/newSearch',
+                      language: 'english',
+                    }),
+                  },
+                ],
+              ];
+              return await this.wingBot.sendMessage(
+                chatId,
+                "Unfortunately, I couldn't find any flights for these dates.",
+                {
+                  reply_markup: { inline_keyboard: newSearchMarkup },
+                },
+              );
+            } else {
+              flights.map(async (flight) => {
+                console.log(flight);
+                try {
+                  const BookingDetails = JSON.stringify({
+                    id: ` ${flight.id}`,
+                    price: `${flight.price['raw']}`,
+                    summary: `${flight.cityFrom || ''} - ${flight.cityTo || ''}`,
+                  });
+                  const saveResultToDb =
+                    await this.databaseService.searchResults.create({
+                      data: { searchResults: BookingDetails, chat_id: chatId },
+                    });
+                  if (saveResultToDb) {
+                    const markup = await displayFlights_en(
+                      flight,
+                      saveResultToDb.id,
+                    );
+                    return this.wingBot.sendMessage(
+                      chatId,
+                      markup.message[type],
+                      {
+                        reply_markup: { inline_keyboard: markup[type] },
+                        parse_mode: 'HTML',
+                      },
+                    );
+                  }
+                } catch (error) {
+                  console.log(error);
+                }
+              });
+            }
+          } catch (error) {
+            console.log(error);
+          }
+
+          return;
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 }

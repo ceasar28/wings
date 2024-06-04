@@ -58,6 +58,13 @@ export class FlightSearchService {
   // search available flights (bot mulitcity, oneway, and return)
 
   searchAvailableOneWayFlight = async (query: any) => {
+    function convertDateFormat(dateString) {
+      // Split the input date string into day, month, and year
+      const [day, month, year] = dateString.split('/');
+
+      // Return the date in the format yyyy-mm-dd
+      return `${year}-${month}-${day}`;
+    }
     try {
       const availableFlights = await this.httpService.axiosRef.get(
         `https://sky-scanner3.p.rapidapi.com/flights/search-one-way`,
@@ -70,7 +77,7 @@ export class FlightSearchService {
           params: {
             fromEntityId: query.from,
             toEntityId: query.to,
-            departDate: query.date_from,
+            departDate: convertDateFormat(query.date_from),
           },
         },
       );
@@ -89,9 +96,13 @@ export class FlightSearchService {
               },
             },
           );
+          if (completeFlights) {
+            console.log(completeFlights.data['data'].itineraries);
+            return completeFlights.data['data'].itineraries;
+          }
         }
         console.log(availableFlights.data);
-        return availableFlights.data;
+        return availableFlights.data['data'].itineraries;
       }
       return;
     } catch (error) {

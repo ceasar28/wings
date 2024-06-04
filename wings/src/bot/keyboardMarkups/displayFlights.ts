@@ -1,14 +1,19 @@
 export const displayFlights_en = (details, dbId) => {
-  const cityFrom = details.cityFrom || '';
-  const cityTo = details.cityTo || '';
-  const cityRouteFrom = details.route[0].cityFrom || '';
-  const cityRouteTO = details.route[0].cityTo || '';
-  const cityRouteFromCode = details.route[0].cityCodeFrom || '';
-  const cityRouteToCode = details.route[0].cityCodeTo || '';
-  const cityRouteFrom2 = details.route[1]?.cityFrom || '';
-  const cityRouteTO2 = details.route[1]?.cityTo || '';
+  const cityFrom = details.legs[0].origin['city'] || '';
+  const cityTo = details.legs[0].destination['city'] || '';
+
+  const countryFrom = details.legs[0].origin['country'] || '';
+  const countryTO = details.legs[0].destination['country'] || '';
+
+  const cityFromCode = details.legs[0].origin['displayCode'];
+  const cityToCode = details.legs[0].destination['displayCode'] || '';
+
+  const cityFrom2 = details.legs[1]?.origin['city'] || '';
+  const cityTO2 = details.legs[1]?.destination['city'] || '';
+
   const cityRouteFrom2Code = details.route[1]?.cityCodeFrom || '';
   const cityRouteTO2Code = details.route[1]?.cityCodeTo || '';
+
   const routeDepartureTime = details.route[0].utc_departure || '';
   const routeArrivalTime = details.route[0].utc_arrival;
   const routeDepartureTime2 = details.route[1]?.utc_departure || '';
