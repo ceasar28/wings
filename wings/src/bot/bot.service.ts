@@ -12,13 +12,17 @@ import {
 } from './keyboardMarkups/index';
 import { DatabaseService } from 'src/database/database.service';
 import { Prisma } from '@prisma/client';
+import { FlightSearchService } from 'src/flight-search/flight-search.service';
 
 @Injectable()
 export class BotService {
   private readonly wingBot: TelegramBot;
   private logger = new Logger(BotService.name);
 
-  constructor(private readonly databaseService: DatabaseService) {
+  constructor(
+    private readonly databaseService: DatabaseService,
+    private readonly flightSearchService: FlightSearchService,
+  ) {
     //initializing Telegram bot
     this.wingBot = new TelegramBot(process.env.TELEGRAM_TOKEN, {
       polling: true,
@@ -44,7 +48,7 @@ export class BotService {
     });
     console.log('session  ', session);
     if (msg.text !== '/start' && session) {
-      // this.handleUserTextInputs(msg, session);
+      this.handleUserTextInputs(msg, session);
     } else {
       // parse incoming message and handle commands
       try {
@@ -91,874 +95,871 @@ export class BotService {
       }
     }
   };
-  // Event handler for users inputs
-  // handleUserTextInputs = async (msg: any, session: any) => {
-  //   try {
-  //     // check if there is a booking detail session
-  //     const bookingDetailSession =
-  //       await this.databaseService.bookingSession.findFirst({
-  //         where: {
-  //           chat_id: msg.chat.id,
-  //         },
-  //       });
-  //     console.log('userInput ', msg);
-  //     // check if it is booking details
-  //     if (bookingDetailSession) {
-  //       if (
-  //         JSON.parse(bookingDetailSession.userAnswerId)['messageId'].length !==
-  //         0
-  //       ) {
-  //         const answerIds = JSON.parse(bookingDetailSession.userAnswerId)[
-  //           'messageId'
-  //         ];
-  //         console.log('answerIds ', answerIds);
-  //         console.log('IDS  ', bookingDetailSession);
-  //         await this.updateBookingSession(msg.chat.id, {
-  //           userAnswerId: JSON.stringify({
-  //             messageId: [...answerIds, msg.message_id],
-  //           }),
-  //         });
-  //       } else {
-  //         await this.updateBookingSession(msg.chat.id, {
-  //           userAnswerId: JSON.stringify({
-  //             messageId: [
-  //               ...JSON.parse(session.userAnswerId)['messageId'],
-  //               msg.message_id,
-  //             ],
-  //           }),
-  //         });
-  //       }
-  //       try {
-  //         const latestBookingDetailSession =
-  //           await this.databaseService.bookingSession.findFirst({
-  //             where: { chat_id: msg.chat.id },
-  //           });
 
-  //         if (
-  //           !latestBookingDetailSession.firstName &&
-  //           JSON.parse(latestBookingDetailSession.firstNamePromptId)[
-  //             'messageId'
-  //           ].length > 0
-  //         ) {
-  //           const updateDetail = await this.updateBookingSession(msg.chat.id, {
-  //             firstName: msg.text.trim(),
-  //             firstNamePromptId: JSON.stringify({ messageId: [] }),
-  //             userAnswerId: JSON.stringify({ messageId: [] }),
-  //           });
-  //           if (updateDetail) {
-  //             const promises = [];
-  //             // loop through departure prompt to delete them
-  //             for (
-  //               let i = 0;
-  //               i <
-  //               JSON.parse(latestBookingDetailSession.firstNamePromptId)[
-  //                 'messageId'
-  //               ].length;
-  //               i++
-  //             ) {
-  //               promises.push(
-  //                 await this.wingBot.deleteMessage(
-  //                   msg.chat.id,
-  //                   JSON.parse(latestBookingDetailSession.firstNamePromptId)[
-  //                     'messageId'
-  //                   ][i],
-  //                 ),
-  //               );
-  //             }
-  //             // loop through to delet all userReply
-  //             for (
-  //               let i = 0;
-  //               i <
-  //               JSON.parse(latestBookingDetailSession.userAnswerId)['messageId']
-  //                 .length;
-  //               i++
-  //             ) {
-  //               promises.push(
-  //                 await this.wingBot.deleteMessage(
-  //                   msg.chat.id,
-  //                   JSON.parse(latestBookingDetailSession.userAnswerId)[
-  //                     'messageId'
-  //                   ][i],
-  //                 ),
-  //               );
-  //             }
+  //Event handler for users inputs
+  handleUserTextInputs = async (msg: any, session: any) => {
+    try {
+      // check if there is a booking detail session
+      const bookingDetailSession =
+        await this.databaseService.bookingSession.findFirst({
+          where: {
+            chat_id: msg.chat.id,
+          },
+        });
+      console.log('userInput ', msg);
+      // check if it is booking details
+      if (bookingDetailSession) {
+        if (
+          JSON.parse(bookingDetailSession.userAnswerId)['messageId'].length !==
+          0
+        ) {
+          const answerIds = JSON.parse(bookingDetailSession.userAnswerId)[
+            'messageId'
+          ];
+          console.log('answerIds ', answerIds);
+          console.log('IDS  ', bookingDetailSession);
+          await this.updateBookingSession(msg.chat.id, {
+            userAnswerId: JSON.stringify({
+              messageId: [...answerIds, msg.message_id],
+            }),
+          });
+        } else {
+          await this.updateBookingSession(msg.chat.id, {
+            userAnswerId: JSON.stringify({
+              messageId: [
+                ...JSON.parse(session.userAnswerId)['messageId'],
+                msg.message_id,
+              ],
+            }),
+          });
+        }
+        try {
+          const latestBookingDetailSession =
+            await this.databaseService.bookingSession.findFirst({
+              where: { chat_id: msg.chat.id },
+            });
 
-  //             console.log(msg.text.trim());
-  //             const markup = bookingDetails_en(
-  //               latestBookingDetailSession.searchResultId,
-  //               msg.text.trim(),
-  //               latestBookingDetailSession.LastName,
-  //               latestBookingDetailSession.email,
-  //             );
-  //             if (markup) {
-  //               await this.wingBot.editMessageReplyMarkup(
-  //                 { inline_keyboard: markup.keyBoardMarkup },
-  //                 {
-  //                   chat_id: msg.chat.id,
-  //                   message_id: Number(
-  //                     latestBookingDetailSession.bookingDetailMarkdownId,
-  //                   ),
-  //                 },
-  //               );
-  //             }
-  //             await Promise.all(promises);
-  //           }
-  //         } else if (
-  //           !latestBookingDetailSession.LastName &&
-  //           JSON.parse(latestBookingDetailSession.lastNamePromptId)['messageId']
-  //             .length > 0
-  //         ) {
-  //           const updateDetail = await this.updateBookingSession(msg.chat.id, {
-  //             LastName: msg.text.trim(),
-  //             lastNamePromptId: JSON.stringify({ messageId: [] }),
-  //             userAnswerId: JSON.stringify({ messageId: [] }),
-  //           });
-  //           if (updateDetail) {
-  //             const promises = [];
-  //             // loop through departure prompt to delete them
-  //             for (
-  //               let i = 0;
-  //               i <
-  //               JSON.parse(latestBookingDetailSession.lastNamePromptId)[
-  //                 'messageId'
-  //               ].length;
-  //               i++
-  //             ) {
-  //               promises.push(
-  //                 await this.wingBot.deleteMessage(
-  //                   msg.chat.id,
-  //                   JSON.parse(latestBookingDetailSession.lastNamePromptId)[
-  //                     'messageId'
-  //                   ][i],
-  //                 ),
-  //               );
-  //             }
-  //             // loop through to delet all userReply
-  //             for (
-  //               let i = 0;
-  //               i <
-  //               JSON.parse(latestBookingDetailSession.userAnswerId)['messageId']
-  //                 .length;
-  //               i++
-  //             ) {
-  //               promises.push(
-  //                 await this.wingBot.deleteMessage(
-  //                   msg.chat.id,
-  //                   JSON.parse(latestBookingDetailSession.userAnswerId)[
-  //                     'messageId'
-  //                   ][i],
-  //                 ),
-  //               );
-  //             }
+          if (
+            !latestBookingDetailSession.firstName &&
+            JSON.parse(latestBookingDetailSession.firstNamePromptId)[
+              'messageId'
+            ].length > 0
+          ) {
+            const updateDetail = await this.updateBookingSession(msg.chat.id, {
+              firstName: msg.text.trim(),
+              firstNamePromptId: JSON.stringify({ messageId: [] }),
+              userAnswerId: JSON.stringify({ messageId: [] }),
+            });
+            if (updateDetail) {
+              const promises = [];
+              // loop through departure prompt to delete them
+              for (
+                let i = 0;
+                i <
+                JSON.parse(latestBookingDetailSession.firstNamePromptId)[
+                  'messageId'
+                ].length;
+                i++
+              ) {
+                promises.push(
+                  await this.wingBot.deleteMessage(
+                    msg.chat.id,
+                    JSON.parse(latestBookingDetailSession.firstNamePromptId)[
+                      'messageId'
+                    ][i],
+                  ),
+                );
+              }
+              // loop through to delet all userReply
+              for (
+                let i = 0;
+                i <
+                JSON.parse(latestBookingDetailSession.userAnswerId)['messageId']
+                  .length;
+                i++
+              ) {
+                promises.push(
+                  await this.wingBot.deleteMessage(
+                    msg.chat.id,
+                    JSON.parse(latestBookingDetailSession.userAnswerId)[
+                      'messageId'
+                    ][i],
+                  ),
+                );
+              }
 
-  //             const markup = bookingDetails_en(
-  //               latestBookingDetailSession.searchResultId,
-  //               latestBookingDetailSession.firstName,
-  //               msg.text.trim(),
-  //               latestBookingDetailSession.email,
-  //             );
-  //             if (markup) {
-  //               await this.wingBot.editMessageReplyMarkup(
-  //                 { inline_keyboard: markup.keyBoardMarkup },
-  //                 {
-  //                   chat_id: msg.chat.id,
-  //                   message_id: Number(
-  //                     latestBookingDetailSession.bookingDetailMarkdownId,
-  //                   ),
-  //                 },
-  //               );
-  //             }
+              console.log(msg.text.trim());
+              const markup = bookingDetails_en(
+                latestBookingDetailSession.searchResultId,
+                msg.text.trim(),
+                latestBookingDetailSession.LastName,
+                latestBookingDetailSession.email,
+              );
+              if (markup) {
+                await this.wingBot.editMessageReplyMarkup(
+                  { inline_keyboard: markup.keyBoardMarkup },
+                  {
+                    chat_id: msg.chat.id,
+                    message_id: Number(
+                      latestBookingDetailSession.bookingDetailMarkdownId,
+                    ),
+                  },
+                );
+              }
+              await Promise.all(promises);
+            }
+          } else if (
+            !latestBookingDetailSession.LastName &&
+            JSON.parse(latestBookingDetailSession.lastNamePromptId)['messageId']
+              .length > 0
+          ) {
+            const updateDetail = await this.updateBookingSession(msg.chat.id, {
+              LastName: msg.text.trim(),
+              lastNamePromptId: JSON.stringify({ messageId: [] }),
+              userAnswerId: JSON.stringify({ messageId: [] }),
+            });
+            if (updateDetail) {
+              const promises = [];
+              // loop through departure prompt to delete them
+              for (
+                let i = 0;
+                i <
+                JSON.parse(latestBookingDetailSession.lastNamePromptId)[
+                  'messageId'
+                ].length;
+                i++
+              ) {
+                promises.push(
+                  await this.wingBot.deleteMessage(
+                    msg.chat.id,
+                    JSON.parse(latestBookingDetailSession.lastNamePromptId)[
+                      'messageId'
+                    ][i],
+                  ),
+                );
+              }
+              // loop through to delet all userReply
+              for (
+                let i = 0;
+                i <
+                JSON.parse(latestBookingDetailSession.userAnswerId)['messageId']
+                  .length;
+                i++
+              ) {
+                promises.push(
+                  await this.wingBot.deleteMessage(
+                    msg.chat.id,
+                    JSON.parse(latestBookingDetailSession.userAnswerId)[
+                      'messageId'
+                    ][i],
+                  ),
+                );
+              }
 
-  //             await Promise.all(promises);
-  //           }
-  //         } else if (
-  //           !latestBookingDetailSession.email &&
-  //           JSON.parse(latestBookingDetailSession.emailPromptId)['messageId']
-  //             .length > 0
-  //         ) {
-  //           const updateDetail = await this.updateBookingSession(msg.chat.id, {
-  //             email: msg.text.trim(),
-  //             emailPromptId: JSON.stringify({ messageId: [] }),
-  //             userAnswerId: JSON.stringify({ messageId: [] }),
-  //           });
-  //           if (updateDetail) {
-  //             const promises = [];
-  //             // loop through departure prompt to delete them
-  //             for (
-  //               let i = 0;
-  //               i <
-  //               JSON.parse(latestBookingDetailSession.emailPromptId)[
-  //                 'messageId'
-  //               ].length;
-  //               i++
-  //             ) {
-  //               promises.push(
-  //                 await this.wingBot.deleteMessage(
-  //                   msg.chat.id,
-  //                   JSON.parse(latestBookingDetailSession.emailPromptId)[
-  //                     'messageId'
-  //                   ][i],
-  //                 ),
-  //               );
-  //             }
-  //             // loop through to delet all userReply
-  //             for (
-  //               let i = 0;
-  //               i <
-  //               JSON.parse(latestBookingDetailSession.userAnswerId)['messageId']
-  //                 .length;
-  //               i++
-  //             ) {
-  //               promises.push(
-  //                 await this.wingBot.deleteMessage(
-  //                   msg.chat.id,
-  //                   JSON.parse(latestBookingDetailSession.userAnswerId)[
-  //                     'messageId'
-  //                   ][i],
-  //                 ),
-  //               );
-  //             }
+              const markup = bookingDetails_en(
+                latestBookingDetailSession.searchResultId,
+                latestBookingDetailSession.firstName,
+                msg.text.trim(),
+                latestBookingDetailSession.email,
+              );
+              if (markup) {
+                await this.wingBot.editMessageReplyMarkup(
+                  { inline_keyboard: markup.keyBoardMarkup },
+                  {
+                    chat_id: msg.chat.id,
+                    message_id: Number(
+                      latestBookingDetailSession.bookingDetailMarkdownId,
+                    ),
+                  },
+                );
+              }
 
-  //             const markup = bookingDetails_en(
-  //               latestBookingDetailSession.searchResultId,
-  //               latestBookingDetailSession.firstName,
-  //               latestBookingDetailSession.LastName,
-  //               msg.text.trim(),
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.keyBoardMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(
-  //                   latestBookingDetailSession.bookingDetailMarkdownId,
-  //                 ),
-  //               },
-  //             );
-  //             await Promise.all(promises);
-  //           }
-  //         }
-  //       } catch (error) {
-  //         console.log(error);
-  //       }
+              await Promise.all(promises);
+            }
+          } else if (
+            !latestBookingDetailSession.email &&
+            JSON.parse(latestBookingDetailSession.emailPromptId)['messageId']
+              .length > 0
+          ) {
+            const updateDetail = await this.updateBookingSession(msg.chat.id, {
+              email: msg.text.trim(),
+              emailPromptId: JSON.stringify({ messageId: [] }),
+              userAnswerId: JSON.stringify({ messageId: [] }),
+            });
+            if (updateDetail) {
+              const promises = [];
+              // loop through departure prompt to delete them
+              for (
+                let i = 0;
+                i <
+                JSON.parse(latestBookingDetailSession.emailPromptId)[
+                  'messageId'
+                ].length;
+                i++
+              ) {
+                promises.push(
+                  await this.wingBot.deleteMessage(
+                    msg.chat.id,
+                    JSON.parse(latestBookingDetailSession.emailPromptId)[
+                      'messageId'
+                    ][i],
+                  ),
+                );
+              }
+              // loop through to delet all userReply
+              for (
+                let i = 0;
+                i <
+                JSON.parse(latestBookingDetailSession.userAnswerId)['messageId']
+                  .length;
+                i++
+              ) {
+                promises.push(
+                  await this.wingBot.deleteMessage(
+                    msg.chat.id,
+                    JSON.parse(latestBookingDetailSession.userAnswerId)[
+                      'messageId'
+                    ][i],
+                  ),
+                );
+              }
 
-  //       return;
-  //     }
+              const markup = bookingDetails_en(
+                latestBookingDetailSession.searchResultId,
+                latestBookingDetailSession.firstName,
+                latestBookingDetailSession.LastName,
+                msg.text.trim(),
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.keyBoardMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(
+                    latestBookingDetailSession.bookingDetailMarkdownId,
+                  ),
+                },
+              );
+              await Promise.all(promises);
+            }
+          }
+        } catch (error) {
+          console.log(error);
+        }
 
-  //     // from here handles flight search details
+        return;
+      }
 
-  //     if (JSON.parse(session.userAnswerId)['messageId'].length !== 0) {
-  //       const answerIds = JSON.parse(session.userAnswerId)['messageId'];
-  //       console.log('answerIds ', answerIds);
-  //       console.log('IDS  ', session);
-  //       await this.updateUserSession(msg.chat.id, {
-  //         userAnswerId: JSON.stringify({
-  //           messageId: [...answerIds, msg.message_id],
-  //         }),
-  //       });
-  //     } else {
-  //       await this.updateUserSession(msg.chat.id, {
-  //         userAnswerId: JSON.stringify({
-  //           messageId: [
-  //             ...JSON.parse(session.userAnswerId)['messageId'],
-  //             msg.message_id,
-  //           ],
-  //         }),
-  //       });
-  //     }
-  //     // Regular expression pattern to match the format DD/MM/YYYY
-  //     const datePattern = /^\d{2}\/\d{2}\/\d{4}$/;
-  //     // Check if the date string matches the pattern
-  //     if (datePattern.test(msg.text.trim())) {
-  //       const latestSession = await this.databaseService.session.findFirst({
-  //         where: { chat_id: msg.chat.id },
-  //       });
-  //       if (
-  //         JSON.parse(latestSession.departureDatePromptId)['messageId']
-  //           .length !== 0 &&
-  //         !latestSession.departureDate
-  //       ) {
-  //         const update = await this.updateUserSession(msg.chat.id, {
-  //           departureDate: msg.text.trim(),
-  //           departureDatePromptId: JSON.stringify({ messageId: [] }),
-  //           userAnswerId: JSON.stringify({ messageId: [] }),
-  //         });
-  //         if (update) {
-  //           if (latestSession.one_way_search_state) {
-  //             const markup = booking_en(
-  //               latestSession.departureCity,
-  //               latestSession.destinationCity,
-  //               msg.text.trim(),
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.oneWayMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           } else if (latestSession.return_search_state) {
-  //             const markup = booking_en(
-  //               latestSession.departureCity,
-  //               latestSession.destinationCity,
-  //               msg.text.trim(),
-  //               latestSession.returnDate,
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.returnMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           } else if (latestSession.multi_city_search_state) {
-  //             await this.updateUserSession(msg.chat.id, {
-  //               multicitySearchData: JSON.stringify({
-  //                 requests: [
-  //                   ...JSON.parse(latestSession.multicitySearchData)[
-  //                     'requests'
-  //                   ],
-  //                   {
-  //                     fly_to: latestSession.destinationCityCode,
-  //                     fly_from: latestSession.departureCityCode,
-  //                     date_from: msg.text.trim(),
-  //                     adults: 1,
-  //                     limit: 3,
-  //                     curr: 'USD',
-  //                   },
-  //                 ],
-  //               }),
-  //             });
-  //             const multicityData =
-  //               await this.databaseService.session.findFirst({
-  //                 where: {
-  //                   chat_id: msg.chat.id,
-  //                 },
-  //               });
-  //             if (multicityData) {
-  //               console.log('MUlti data', multicityData);
-  //               const markup = booking_en(
-  //                 '',
-  //                 '',
-  //                 '',
-  //                 '',
-  //                 JSON.parse(multicityData.multicitySearchData)['requests'],
-  //               );
-  //               //TODO: change markup to multicity
-  //               await this.wingBot.editMessageText(markup.message.multiCityMarkup, {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //                 reply_markup: { inline_keyboard: markup.multiCityMarkup },
-  //               });
-  //             }
-  //           }
-  //         }
-  //         // loop through departuredate prompt to delete them
-  //         for (
-  //           let i = 0;
-  //           i <
-  //           JSON.parse(latestSession.departureDatePromptId)['messageId'].length;
-  //           i++
-  //         ) {
-  //           await this.wingBot.deleteMessage(
-  //             msg.chat.id,
-  //             JSON.parse(latestSession.departureDatePromptId)['messageId'][i],
-  //           );
-  //         }
-  //         // loop through to delet all userReply
-  //         for (
-  //           let i = 0;
-  //           i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
-  //           i++
-  //         ) {
-  //           await this.wingBot.deleteMessage(
-  //             msg.chat.id,
-  //             JSON.parse(latestSession.userAnswerId)['messageId'][i],
-  //           );
-  //         }
-  //       } else if (
-  //         // this will handle return flight
-  //         JSON.parse(session.returnDatePromptId)['messageId'].length !== 0 &&
-  //         !session.returnDate
-  //       ) {
-  //         const update = await this.updateUserSession(msg.chat.id, {
-  //           returnDate: msg.text.trim(),
-  //           returnDatePromptId: JSON.stringify({ messageId: [] }),
-  //           userAnswerId: JSON.stringify({ messageId: [] }),
-  //         });
+      // from here handles flight search details
 
-  //         if (update) {
-  //           if (latestSession.one_way_search_state) {
-  //             const markup = booking_en(
-  //               latestSession.departureCity,
-  //               latestSession.destinationCity,
-  //               msg.text.trim(),
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.oneWayMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           } else if (latestSession.return_search_state) {
-  //             const markup = booking_en(
-  //               latestSession.departureCity,
-  //               latestSession.destinationCity,
-  //               latestSession.departureDate,
-  //               msg.text.trim(),
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.returnMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
+      if (JSON.parse(session.userAnswerId)['messageId'].length !== 0) {
+        const answerIds = JSON.parse(session.userAnswerId)['messageId'];
+        console.log('answerIds ', answerIds);
+        console.log('IDS  ', session);
+        await this.updateUserSession(msg.chat.id, {
+          userAnswerId: JSON.stringify({
+            messageId: [...answerIds, msg.message_id],
+          }),
+        });
+      } else {
+        await this.updateUserSession(msg.chat.id, {
+          userAnswerId: JSON.stringify({
+            messageId: [
+              ...JSON.parse(session.userAnswerId)['messageId'],
+              msg.message_id,
+            ],
+          }),
+        });
+      }
+      // Regular expression pattern to match the format DD/MM/YYYY
+      const datePattern = /^\d{2}\/\d{2}\/\d{4}$/;
+      // Check if the date string matches the pattern
+      if (datePattern.test(msg.text.trim())) {
+        const latestSession = await this.databaseService.session.findFirst({
+          where: { chat_id: msg.chat.id },
+        });
+        if (
+          JSON.parse(latestSession.departureDatePromptId)['messageId']
+            .length !== 0 &&
+          !latestSession.departureDate
+        ) {
+          const update = await this.updateUserSession(msg.chat.id, {
+            departureDate: msg.text.trim(),
+            departureDatePromptId: JSON.stringify({ messageId: [] }),
+            userAnswerId: JSON.stringify({ messageId: [] }),
+          });
+          if (update) {
+            if (latestSession.one_way_search_state) {
+              const markup = booking_en(
+                latestSession.departureCity,
+                latestSession.destinationCity,
+                msg.text.trim(),
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.oneWayMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            } else if (latestSession.return_search_state) {
+              const markup = booking_en(
+                latestSession.departureCity,
+                latestSession.destinationCity,
+                msg.text.trim(),
+                latestSession.returnDate,
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.returnMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            } else if (latestSession.multi_city_search_state) {
+              await this.updateUserSession(msg.chat.id, {
+                multicitySearchData: JSON.stringify({
+                  requests: [
+                    ...JSON.parse(latestSession.multicitySearchData)[
+                      'requests'
+                    ],
+                    {
+                      fly_to: latestSession.destinationCityCode,
+                      fly_from: latestSession.departureCityCode,
+                      date_from: msg.text.trim(),
+                      adults: 1,
+                      limit: 3,
+                      curr: 'USD',
+                    },
+                  ],
+                }),
+              });
+              const multicityData =
+                await this.databaseService.session.findFirst({
+                  where: {
+                    chat_id: msg.chat.id,
+                  },
+                });
+              if (multicityData) {
+                console.log('MUlti data', multicityData);
+                const markup = booking_en(
+                  '',
+                  '',
+                  '',
+                  '',
+                  JSON.parse(multicityData.multicitySearchData)['requests'],
+                );
+                //TODO: change markup to multicity
+                await this.wingBot.editMessageText(
+                  markup.message.multiCityMarkup,
+                  {
+                    chat_id: msg.chat.id,
+                    message_id: Number(latestSession.bookingMarkdownId),
+                    reply_markup: { inline_keyboard: markup.multiCityMarkup },
+                  },
+                );
+              }
+            }
+          }
+          // loop through departuredate prompt to delete them
+          for (
+            let i = 0;
+            i <
+            JSON.parse(latestSession.departureDatePromptId)['messageId'].length;
+            i++
+          ) {
+            await this.wingBot.deleteMessage(
+              msg.chat.id,
+              JSON.parse(latestSession.departureDatePromptId)['messageId'][i],
+            );
+          }
+          // loop through to delet all userReply
+          for (
+            let i = 0;
+            i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
+            i++
+          ) {
+            await this.wingBot.deleteMessage(
+              msg.chat.id,
+              JSON.parse(latestSession.userAnswerId)['messageId'][i],
+            );
+          }
+        } else if (
+          // this will handle return flight
+          JSON.parse(session.returnDatePromptId)['messageId'].length !== 0 &&
+          !session.returnDate
+        ) {
+          const update = await this.updateUserSession(msg.chat.id, {
+            returnDate: msg.text.trim(),
+            returnDatePromptId: JSON.stringify({ messageId: [] }),
+            userAnswerId: JSON.stringify({ messageId: [] }),
+          });
 
-  //             // loop through departuredate prompt to delete them
-  //             for (
-  //               let i = 0;
-  //               i <
-  //               JSON.parse(latestSession.returnDatePromptId)['messageId']
-  //                 .length;
-  //               i++
-  //             ) {
-  //               await this.wingBot.deleteMessage(
-  //                 msg.chat.id,
-  //                 JSON.parse(latestSession.returnDatePromptId)['messageId'][i],
-  //               );
-  //             }
-  //             // loop through to delet all userReply
-  //             for (
-  //               let i = 0;
-  //               i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
-  //               i++
-  //             ) {
-  //               await this.wingBot.deleteMessage(
-  //                 msg.chat.id,
-  //                 JSON.parse(latestSession.userAnswerId)['messageId'][i],
-  //               );
-  //             }
-  //           } else if (latestSession.multi_city_search_state) {
-  //             const markup = booking_en(
-  //               msg.text.trim(),
-  //               latestSession.destinationCity,
-  //               latestSession.departureDate,
-  //             );
-  //             //TODO: change markup to multicity
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.returnMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           }
-  //         }
-  //       }
-  //     } else {
-  //       console.log('Not a date');
-  //     }
+          if (update) {
+            if (latestSession.one_way_search_state) {
+              const markup = booking_en(
+                latestSession.departureCity,
+                latestSession.destinationCity,
+                msg.text.trim(),
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.oneWayMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            } else if (latestSession.return_search_state) {
+              const markup = booking_en(
+                latestSession.departureCity,
+                latestSession.destinationCity,
+                latestSession.departureDate,
+                msg.text.trim(),
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.returnMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
 
-  //     // this extracts the airport code, when a user presses the inline button
-  //     function extractStringInBracket(sentence) {
-  //       const start = sentence.indexOf('(') + 1;
-  //       const end = sentence.indexOf(')', start);
-  //       return sentence.substring(start, end);
-  //     }
+              // loop through departuredate prompt to delete them
+              for (
+                let i = 0;
+                i <
+                JSON.parse(latestSession.returnDatePromptId)['messageId']
+                  .length;
+                i++
+              ) {
+                await this.wingBot.deleteMessage(
+                  msg.chat.id,
+                  JSON.parse(latestSession.returnDatePromptId)['messageId'][i],
+                );
+              }
+              // loop through to delet all userReply
+              for (
+                let i = 0;
+                i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
+                i++
+              ) {
+                await this.wingBot.deleteMessage(
+                  msg.chat.id,
+                  JSON.parse(latestSession.userAnswerId)['messageId'][i],
+                );
+              }
+            } else if (latestSession.multi_city_search_state) {
+              const markup = booking_en(
+                msg.text.trim(),
+                latestSession.destinationCity,
+                latestSession.departureDate,
+              );
+              //TODO: change markup to multicity
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.returnMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            }
+          }
+        }
+      } else {
+        console.log('Not a date');
+      }
 
-  //     // if (JSON.parse(session.userAnswerId)['messageId'].length !== 0) {
-  //     //   const answerIds = JSON.parse(session.userAnswerId)['messageId'];
-  //     //   console.log('answerIds ', answerIds);
-  //     //   console.log('IDS  ', session);
-  //     //   await this.updateUserSession(msg.chat.id, {
-  //     //     userAnswerId: JSON.stringify({
-  //     //       messageId: [...answerIds, msg.message_id],
-  //     //     }),
-  //     //   });
-  //     // } else {
-  //     //   await this.updateUserSession(msg.chat.id, {
-  //     //     userAnswerId: JSON.stringify({
-  //     //       messageId: [
-  //     //         ...JSON.parse(session.userAnswerId)['messageId'],
-  //     //         msg.message_id,
-  //     //       ],
-  //     //     }),
-  //     //   });
-  //     // }
+      // this extracts the airport code, when a user presses the inline button
+      function extractStringInBracket(sentence) {
+        const start = sentence.indexOf('(') + 1;
+        const end = sentence.indexOf(')', start);
+        return sentence.substring(start, end);
+      }
 
-  //     // handle airport selected by a user
-  //     const airportCode = extractStringInBracket(msg.text.trim());
+      // if (JSON.parse(session.userAnswerId)['messageId'].length !== 0) {
+      //   const answerIds = JSON.parse(session.userAnswerId)['messageId'];
+      //   console.log('answerIds ', answerIds);
+      //   console.log('IDS  ', session);
+      //   await this.updateUserSession(msg.chat.id, {
+      //     userAnswerId: JSON.stringify({
+      //       messageId: [...answerIds, msg.message_id],
+      //     }),
+      //   });
+      // } else {
+      //   await this.updateUserSession(msg.chat.id, {
+      //     userAnswerId: JSON.stringify({
+      //       messageId: [
+      //         ...JSON.parse(session.userAnswerId)['messageId'],
+      //         msg.message_id,
+      //       ],
+      //     }),
+      //   });
+      // }
 
-  //     // save this to a db
-  //     if (airportCode !== undefined && airportCode !== '') {
-  //       const latestSession = await this.databaseService.session.findFirst({
-  //         where: { chat_id: msg.chat.id },
-  //       });
-  //       if (!latestSession.departureCityCode) {
-  //         console.log('code ', airportCode);
-  //         const update = await this.updateUserSession(msg.chat.id, {
-  //           departureCityCode: airportCode,
-  //           departureCity: msg.text.trim(),
-  //           departureCityPromptId: JSON.stringify({ messageId: [] }),
-  //           userAnswerId: JSON.stringify({ messageId: [] }),
-  //         });
-  //         if (update) {
-  //           const promises = [];
-  //           // loop through departure prompt to delete them
-  //           for (
-  //             let i = 0;
-  //             i <
-  //             JSON.parse(latestSession.departureCityPromptId)['messageId']
-  //               .length;
-  //             i++
-  //           ) {
-  //             promises.push(
-  //               await this.wingBot.deleteMessage(
-  //                 msg.chat.id,
-  //                 JSON.parse(latestSession.departureCityPromptId)['messageId'][
-  //                   i
-  //                 ],
-  //               ),
-  //             );
-  //           }
-  //           // loop through to delet all userReply
-  //           for (
-  //             let i = 0;
-  //             i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
-  //             i++
-  //           ) {
-  //             promises.push(
-  //               await this.wingBot.deleteMessage(
-  //                 msg.chat.id,
-  //                 JSON.parse(latestSession.userAnswerId)['messageId'][i],
-  //               ),
-  //             );
-  //           }
+      // handle airport selected by a user
+      const airportCode = extractStringInBracket(msg.text.trim());
 
-  //           if (latestSession.one_way_search_state) {
-  //             const markup = booking_en(
-  //               msg.text.trim(),
-  //               latestSession.destinationCity,
-  //               latestSession.departureDate,
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.oneWayMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           } else if (latestSession.return_search_state) {
-  //             const markup = booking_en(
-  //               msg.text.trim(),
-  //               latestSession.destinationCity,
-  //               latestSession.departureDate,
-  //               latestSession.returnDate,
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.returnMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           } else if (latestSession.multi_city_search_state) {
-  //             const deletedAllResponse = await Promise.all(promises);
-  //             if (deletedAllResponse) {
-  //               await this.destinationCitySelection(
-  //                 latestSession.chat_id,
-  //                 latestSession.language,
-  //               );
-  //             }
-  //           }
-  //         }
-  //       } else if (!latestSession.destinationCityCode) {
-  //         const update = await this.updateUserSession(msg.chat.id, {
-  //           destinationCityCode: airportCode,
-  //           destinationCity: msg.text.trim(),
-  //           destinationCityPromptId: JSON.stringify({ messageId: [] }),
-  //           userAnswerId: JSON.stringify({ messageId: [] }),
-  //         });
-  //         if (update) {
-  //           if (latestSession.one_way_search_state) {
-  //             const markup = booking_en(
-  //               latestSession.departureCity,
-  //               msg.text.trim(),
-  //               latestSession.departureDate,
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.oneWayMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           } else if (latestSession.return_search_state) {
-  //             const markup = booking_en(
-  //               latestSession.departureCity,
-  //               msg.text.trim(),
-  //               latestSession.departureDate,
-  //               latestSession.returnDate,
-  //             );
-  //             await this.wingBot.editMessageReplyMarkup(
-  //               { inline_keyboard: markup.returnMarkup },
-  //               {
-  //                 chat_id: msg.chat.id,
-  //                 message_id: Number(latestSession.bookingMarkdownId),
-  //               },
-  //             );
-  //           } else if (latestSession.multi_city_search_state) {
-  //             await this.departureDateSelection(
-  //               latestSession.chat_id,
-  //               latestSession.language,
-  //             );
-  //           }
-  //         }
-  //         // loop through departure prompt to delete them
-  //         for (
-  //           let i = 0;
-  //           i <
-  //           JSON.parse(latestSession.destinationCityPromptId)['messageId']
-  //             .length;
-  //           i++
-  //         ) {
-  //           await this.wingBot.deleteMessage(
-  //             msg.chat.id,
-  //             JSON.parse(latestSession.destinationCityPromptId)['messageId'][i],
-  //           );
-  //         }
-  //         // loop through to delet all userReply
-  //         for (
-  //           let i = 0;
-  //           i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
-  //           i++
-  //         ) {
-  //           await this.wingBot.deleteMessage(
-  //             msg.chat.id,
-  //             JSON.parse(latestSession.userAnswerId)['messageId'][i],
-  //           );
-  //         }
-  //       } else {
-  //         //TODO: handle multicity
-  //         // this.multicityCode[msg.chat.id] = airportCode;
-  //         // this.thirdCity[msg.chat.id] = (msg.text).trim();
-  //       }
-  //     } else {
-  //       console.log('code is empty');
-  //     }
-  //     // parse incoming message and handle commands
-  //     try {
-  //       const latestSession = await this.databaseService.session.findFirst({
-  //         where: { chat_id: msg.chat.id },
-  //       });
-  //       if (
-  //         !latestSession.departureCityCode ||
-  //         !latestSession.destinationCityCode ||
-  //         latestSession.multi_city_search_state
-  //       ) {
-  //         const matchedCity = await this.flightBookingService.searchAirport(
-  //           msg.text.trim(),
-  //         );
-  //         if (matchedCity) {
-  //           // Define your keyboard layout
-  //           const cities = matchedCity.locations.map((city) => {
-  //             return [
-  //               `${city.city['name']}, ${city.city['country'].name} (${city.code})`,
-  //             ];
-  //           });
-  //           //the markup from yhr returned cities
-  //           const keyboard = cities;
+      // save this to a db
+      if (airportCode !== undefined && airportCode !== '') {
+        const latestSession = await this.databaseService.session.findFirst({
+          where: { chat_id: msg.chat.id },
+        });
+        if (!latestSession.departureCityCode) {
+          console.log('code ', airportCode);
+          const update = await this.updateUserSession(msg.chat.id, {
+            departureCityCode: airportCode,
+            departureCity: msg.text.trim(),
+            departureCityPromptId: JSON.stringify({ messageId: [] }),
+            userAnswerId: JSON.stringify({ messageId: [] }),
+          });
+          if (update) {
+            const promises = [];
+            // loop through departure prompt to delete them
+            for (
+              let i = 0;
+              i <
+              JSON.parse(latestSession.departureCityPromptId)['messageId']
+                .length;
+              i++
+            ) {
+              promises.push(
+                await this.wingBot.deleteMessage(
+                  msg.chat.id,
+                  JSON.parse(latestSession.departureCityPromptId)['messageId'][
+                    i
+                  ],
+                ),
+              );
+            }
+            // loop through to delet all userReply
+            for (
+              let i = 0;
+              i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
+              i++
+            ) {
+              promises.push(
+                await this.wingBot.deleteMessage(
+                  msg.chat.id,
+                  JSON.parse(latestSession.userAnswerId)['messageId'][i],
+                ),
+              );
+            }
 
-  //           // Create a reply keyboard markup
-  //           const SelectCityMarkup = {
-  //             keyboard: keyboard,
-  //             one_time_keyboard: true,
-  //             remove_keyboard: true,
-  //           };
-  //           switch (latestSession.language) {
-  //             case 'english':
-  //               //TODO: SEND reply button along
-  //               if (!latestSession.departureCityCode) {
-  //                 const selectCityPrompt = await this.wingBot.sendMessage(
-  //                   msg.chat.id,
-  //                   `Please choose the city from the list 👇`,
-  //                   { reply_markup: SelectCityMarkup },
-  //                 );
-  //                 if (selectCityPrompt) {
-  //                   await this.updateUserSession(msg.chat.id, {
-  //                     departureCityPromptId: JSON.stringify({
-  //                       messageId: [
-  //                         ...JSON.parse(session.departureCityPromptId)[
-  //                           'messageId'
-  //                         ],
-  //                         selectCityPrompt.message_id,
-  //                       ],
-  //                     }),
-  //                   });
-  //                   return;
-  //                 }
-  //               } else if (
-  //                 JSON.parse(latestSession.destinationCityPromptId)['messageId']
-  //                   .length !== 0 &&
-  //                 !latestSession.destinationCityCode
-  //               ) {
-  //                 const selectCityPrompt = await this.wingBot.sendMessage(
-  //                   msg.chat.id,
-  //                   `Please choose the city from the list 👇`,
-  //                   { reply_markup: SelectCityMarkup },
-  //                 );
-  //                 if (selectCityPrompt) {
-  //                   await this.updateUserSession(msg.chat.id, {
-  //                     destinationCityPromptId: JSON.stringify({
-  //                       messageId: [
-  //                         ...JSON.parse(latestSession.destinationCityPromptId)[
-  //                           'messageId'
-  //                         ],
-  //                         selectCityPrompt.message_id,
-  //                       ],
-  //                     }),
-  //                   });
-  //                   return;
-  //                 }
-  //               } else if (
-  //                 JSON.parse(latestSession.destinationCityPromptId)['messageId']
-  //                   .length !== 0 &&
-  //                 latestSession.destinationCityCode &&
-  //                 !latestSession.departureDatePromptId
-  //               ) {
-  //                 // loop through destination prompt to delete them
-  //                 for (
-  //                   let i = 0;
-  //                   i <
-  //                   JSON.parse(latestSession.destinationCityPromptId)[
-  //                     'messageId'
-  //                   ].length;
-  //                   i++
-  //                 ) {
-  //                   await this.wingBot.deleteMessage(
-  //                     msg.chat.id,
-  //                     JSON.parse(latestSession.destinationCityPromptId)[
-  //                       'messageId'
-  //                     ][i],
-  //                   );
-  //                 }
-  //                 // loop through to delete all userReply
-  //                 for (
-  //                   let i = 0;
-  //                   i <
-  //                   JSON.parse(latestSession.userAnswerId)['messageId'].length;
-  //                   i++
-  //                 ) {
-  //                   await this.wingBot.deleteMessage(
-  //                     msg.chat.id,
-  //                     JSON.parse(latestSession.userAnswerId)['messageId'][i],
-  //                   );
-  //                 }
-  //                 //TODO:delete userAnswerId
-  //                 // delete this.userAnswerId[msg.chat.id];
+            if (latestSession.one_way_search_state) {
+              const markup = booking_en(
+                msg.text.trim(),
+                latestSession.destinationCity,
+                latestSession.departureDate,
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.oneWayMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            } else if (latestSession.return_search_state) {
+              const markup = booking_en(
+                msg.text.trim(),
+                latestSession.destinationCity,
+                latestSession.departureDate,
+                latestSession.returnDate,
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.returnMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            } else if (latestSession.multi_city_search_state) {
+              const deletedAllResponse = await Promise.all(promises);
+              if (deletedAllResponse) {
+                await this.destinationCitySelection(latestSession.chat_id);
+              }
+            }
+          }
+        } else if (!latestSession.destinationCityCode) {
+          const update = await this.updateUserSession(msg.chat.id, {
+            destinationCityCode: airportCode,
+            destinationCity: msg.text.trim(),
+            destinationCityPromptId: JSON.stringify({ messageId: [] }),
+            userAnswerId: JSON.stringify({ messageId: [] }),
+          });
+          if (update) {
+            if (latestSession.one_way_search_state) {
+              const markup = booking_en(
+                latestSession.departureCity,
+                msg.text.trim(),
+                latestSession.departureDate,
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.oneWayMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            } else if (latestSession.return_search_state) {
+              const markup = booking_en(
+                latestSession.departureCity,
+                msg.text.trim(),
+                latestSession.departureDate,
+                latestSession.returnDate,
+              );
+              await this.wingBot.editMessageReplyMarkup(
+                { inline_keyboard: markup.returnMarkup },
+                {
+                  chat_id: msg.chat.id,
+                  message_id: Number(latestSession.bookingMarkdownId),
+                },
+              );
+            } else if (latestSession.multi_city_search_state) {
+              await this.departureDateSelection(latestSession.chat_id);
+            }
+          }
+          // loop through departure prompt to delete them
+          for (
+            let i = 0;
+            i <
+            JSON.parse(latestSession.destinationCityPromptId)['messageId']
+              .length;
+            i++
+          ) {
+            await this.wingBot.deleteMessage(
+              msg.chat.id,
+              JSON.parse(latestSession.destinationCityPromptId)['messageId'][i],
+            );
+          }
+          // loop through to delet all userReply
+          for (
+            let i = 0;
+            i < JSON.parse(latestSession.userAnswerId)['messageId'].length;
+            i++
+          ) {
+            await this.wingBot.deleteMessage(
+              msg.chat.id,
+              JSON.parse(latestSession.userAnswerId)['messageId'][i],
+            );
+          }
+        } else {
+          //TODO: handle multicity
+          // this.multicityCode[msg.chat.id] = airportCode;
+          // this.thirdCity[msg.chat.id] = (msg.text).trim();
+        }
+      } else {
+        console.log('code is empty');
+      }
+      // parse incoming message and handle commands
+      try {
+        const latestSession = await this.databaseService.session.findFirst({
+          where: { chat_id: msg.chat.id },
+        });
+        if (
+          !latestSession.departureCityCode ||
+          !latestSession.destinationCityCode ||
+          latestSession.multi_city_search_state
+        ) {
+          const matchedCity = await this.flightSearchService.searchAirport(
+            msg.text.trim(),
+          );
+          if (matchedCity) {
+            // Define your keyboard layout
+            const cities = matchedCity.map((city) => {
+              return [`${city['name']}, ${city['location']} (${city.iata})`];
+            });
+            //the markup from yhr returned cities
+            const keyboard = cities;
 
-  //                 const markup = booking_en(
-  //                   latestSession.departureCity[msg.chat.id],
-  //                   latestSession.destinationCity[msg.chat.id],
-  //                   latestSession.departureDate[msg.chat.id],
-  //                 );
-  //                 const setDestinationCity =
-  //                   await this.wingBot.editMessageReplyMarkup(
-  //                     { inline_keyboard: markup.oneWayMarkup },
-  //                     {
-  //                       chat_id: msg.chat.id,
-  //                       message_id: session.bookingMarkdownId,
-  //                     },
-  //                   );
-  //                 if (setDestinationCity) {
-  //                   return;
-  //                 }
-  //                 return;
-  //               } else if (
-  //                 JSON.parse(latestSession.departureDatePromptId)['messageId']
-  //                   .length !== 0 &&
-  //                 latestSession.departureDate
-  //               ) {
-  //                 const markup = booking_en(
-  //                   latestSession.departureCity,
-  //                   latestSession.destinationCity,
-  //                   latestSession.departureDate,
-  //                 );
-  //                 const setDepartureDate =
-  //                   await this.wingBot.editMessageReplyMarkup(
-  //                     {
-  //                       inline_keyboard: markup.oneWayMarkup,
-  //                     },
-  //                     {
-  //                       chat_id: msg.chat.id,
-  //                       message_id: Number(latestSession.bookingMarkdownId),
-  //                     },
-  //                   );
-  //                 if (setDepartureDate) {
-  //                   // loop through destination prompt to delete them
+            // Create a reply keyboard markup
+            const SelectCityMarkup = {
+              keyboard: keyboard,
+              one_time_keyboard: true,
+              remove_keyboard: true,
+            };
+            switch (latestSession.language) {
+              case 'english':
+                //TODO: SEND reply button along
+                if (!latestSession.departureCityCode) {
+                  const selectCityPrompt = await this.wingBot.sendMessage(
+                    msg.chat.id,
+                    `Please choose the city from the list 👇`,
+                    { reply_markup: SelectCityMarkup },
+                  );
+                  if (selectCityPrompt) {
+                    await this.updateUserSession(msg.chat.id, {
+                      departureCityPromptId: JSON.stringify({
+                        messageId: [
+                          ...JSON.parse(session.departureCityPromptId)[
+                            'messageId'
+                          ],
+                          selectCityPrompt.message_id,
+                        ],
+                      }),
+                    });
+                    return;
+                  }
+                } else if (
+                  JSON.parse(latestSession.destinationCityPromptId)['messageId']
+                    .length !== 0 &&
+                  !latestSession.destinationCityCode
+                ) {
+                  const selectCityPrompt = await this.wingBot.sendMessage(
+                    msg.chat.id,
+                    `Please choose the city from the list 👇`,
+                    { reply_markup: SelectCityMarkup },
+                  );
+                  if (selectCityPrompt) {
+                    await this.updateUserSession(msg.chat.id, {
+                      destinationCityPromptId: JSON.stringify({
+                        messageId: [
+                          ...JSON.parse(latestSession.destinationCityPromptId)[
+                            'messageId'
+                          ],
+                          selectCityPrompt.message_id,
+                        ],
+                      }),
+                    });
+                    return;
+                  }
+                } else if (
+                  JSON.parse(latestSession.destinationCityPromptId)['messageId']
+                    .length !== 0 &&
+                  latestSession.destinationCityCode &&
+                  !latestSession.departureDatePromptId
+                ) {
+                  // loop through destination prompt to delete them
+                  for (
+                    let i = 0;
+                    i <
+                    JSON.parse(latestSession.destinationCityPromptId)[
+                      'messageId'
+                    ].length;
+                    i++
+                  ) {
+                    await this.wingBot.deleteMessage(
+                      msg.chat.id,
+                      JSON.parse(latestSession.destinationCityPromptId)[
+                        'messageId'
+                      ][i],
+                    );
+                  }
+                  // loop through to delete all userReply
+                  for (
+                    let i = 0;
+                    i <
+                    JSON.parse(latestSession.userAnswerId)['messageId'].length;
+                    i++
+                  ) {
+                    await this.wingBot.deleteMessage(
+                      msg.chat.id,
+                      JSON.parse(latestSession.userAnswerId)['messageId'][i],
+                    );
+                  }
+                  //TODO:delete userAnswerId
+                  // delete this.userAnswerId[msg.chat.id];
 
-  //                   for (
-  //                     let i = 0;
-  //                     JSON.parse(latestSession.departureDatePromptId)[
-  //                       'messageId'
-  //                     ].length;
-  //                     i++
-  //                   ) {
-  //                     await this.wingBot.deleteMessage(
-  //                       msg.chat.id,
-  //                       JSON.parse(latestSession.departureDatePromptId)[
-  //                         'messageId'
-  //                       ][i],
-  //                     );
-  //                   }
-  //                   // loop through to delete all userReply
-  //                   for (
-  //                     let i = 0;
-  //                     i <
-  //                     JSON.parse(latestSession.userAnswerId)['messageId']
-  //                       .length;
-  //                     i++
-  //                   ) {
-  //                     await this.wingBot.deleteMessage(
-  //                       msg.chat.id,
-  //                       JSON.parse(latestSession.userAnswerId)['messageId'][i],
-  //                     );
-  //                   }
-  //                   // delete this.userAnswerId[msg.chat.id];
-  //                   return;
-  //                 }
-  //               }
-  //               return;
+                  const markup = booking_en(
+                    latestSession.departureCity[msg.chat.id],
+                    latestSession.destinationCity[msg.chat.id],
+                    latestSession.departureDate[msg.chat.id],
+                  );
+                  const setDestinationCity =
+                    await this.wingBot.editMessageReplyMarkup(
+                      { inline_keyboard: markup.oneWayMarkup },
+                      {
+                        chat_id: msg.chat.id,
+                        message_id: session.bookingMarkdownId,
+                      },
+                    );
+                  if (setDestinationCity) {
+                    return;
+                  }
+                  return;
+                } else if (
+                  JSON.parse(latestSession.departureDatePromptId)['messageId']
+                    .length !== 0 &&
+                  latestSession.departureDate
+                ) {
+                  const markup = booking_en(
+                    latestSession.departureCity,
+                    latestSession.destinationCity,
+                    latestSession.departureDate,
+                  );
+                  const setDepartureDate =
+                    await this.wingBot.editMessageReplyMarkup(
+                      {
+                        inline_keyboard: markup.oneWayMarkup,
+                      },
+                      {
+                        chat_id: msg.chat.id,
+                        message_id: Number(latestSession.bookingMarkdownId),
+                      },
+                    );
+                  if (setDepartureDate) {
+                    // loop through destination prompt to delete them
 
-  //             default:
-  //               const searchReplyMarkup = {
-  //                 inline_keyboard: searchType_en.searchTypeMarkup,
-  //               };
-  //               this.wingBot.sendMessage(
-  //                 msg.chat.id,
-  //                 'Please select the type of search 👇',
-  //                 {
-  //                   reply_markup: searchReplyMarkup,
-  //                 },
-  //               );
-  //           }
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.log('second');
-  //       console.error(error);
+                    for (
+                      let i = 0;
+                      JSON.parse(latestSession.departureDatePromptId)[
+                        'messageId'
+                      ].length;
+                      i++
+                    ) {
+                      await this.wingBot.deleteMessage(
+                        msg.chat.id,
+                        JSON.parse(latestSession.departureDatePromptId)[
+                          'messageId'
+                        ][i],
+                      );
+                    }
+                    // loop through to delete all userReply
+                    for (
+                      let i = 0;
+                      i <
+                      JSON.parse(latestSession.userAnswerId)['messageId']
+                        .length;
+                      i++
+                    ) {
+                      await this.wingBot.deleteMessage(
+                        msg.chat.id,
+                        JSON.parse(latestSession.userAnswerId)['messageId'][i],
+                      );
+                    }
+                    // delete this.userAnswerId[msg.chat.id];
+                    return;
+                  }
+                }
+                return;
 
-  //       return await this.wingBot.sendMessage(
-  //         msg.chat.id,
-  //         `Processing command failed, please try again`,
-  //       );
-  //     }
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // };
-  // handlebuttoncommands
+              default:
+                const searchReplyMarkup = {
+                  inline_keyboard: searchType_en.searchTypeMarkup,
+                };
+                this.wingBot.sendMessage(
+                  msg.chat.id,
+                  'Please select the type of search 👇',
+                  {
+                    reply_markup: searchReplyMarkup,
+                  },
+                );
+            }
+          }
+        }
+      } catch (error) {
+        console.log('second');
+        console.error(error);
+
+        return await this.wingBot.sendMessage(
+          msg.chat.id,
+          `Processing command failed, please try again`,
+        );
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  //handlebuttoncommands;
   handleButtonCommand = async (query: any) => {
     this.logger.debug(query);
     let command: string;
@@ -1274,6 +1275,106 @@ export class BotService {
             query.message.message_id,
           );
 
+        case '/departureCity':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          return await this.departureCitySelection(query.message.chat.id);
+
+        case '/destinationCity':
+          return await this.destinationCitySelection(query.message.chat.id);
+
+        case '/dateOfDeparture':
+          return await this.departureDateSelection(query.message.chat.id);
+
+        case '/dateOfReturn':
+          return await this.returnDateSelection(query.message.chat.id);
+
+        // for multi-city
+        case '/addflights':
+          await this.updateUserSession(query.message.chat.id, {
+            departureCityPromptId: JSON.stringify({ messageId: [] }),
+            destinationCityPromptId: JSON.stringify({ messageId: [] }),
+            userAnswerId: JSON.stringify({ messageId: [] }),
+            departureDatePromptId: JSON.stringify({ messageId: [] }),
+            departureCity: '',
+            destinationCity: '',
+            departureCityCode: '',
+            destinationCityCode: '',
+            departureDate: '',
+          });
+          return await this.departureCitySelection(query.message.chat.id);
+
+        case '/searchOneWayFlight':
+          const sessionOneWay = await this.databaseService.session.findFirst({
+            where: { chat_id: query.message.chat.id },
+          });
+          if (sessionOneWay) {
+            const availableFlights =
+              await this.flightBookingService.searchAvailableOneWayFlight({
+                from: sessionOneWay.departureCityCode,
+                to: sessionOneWay.destinationCityCode,
+                date_from: sessionOneWay.departureDate,
+                currency: 'USD',
+              });
+            if (availableFlights) {
+              console.log(availableFlights.data);
+              return await this.displayFlights(
+                query.message.chat.id,
+                sessionOneWay.language,
+                'oneWayMarkup',
+                availableFlights.data,
+              );
+            }
+          }
+          return;
+
+        case '/searchReturnFlight':
+          const sessionReturn = await this.databaseService.session.findFirst({
+            where: { chat_id: query.message.chat.id },
+          });
+          if (sessionReturn) {
+            const availableFlights =
+              await this.flightBookingService.searchAvailableReturnFlight({
+                from: sessionReturn.departureCityCode,
+                to: sessionReturn.destinationCityCode,
+                date_from: sessionReturn.departureDate,
+                return_from: sessionReturn.returnDate,
+                return_to: sessionReturn.returnDate,
+                currency: 'USD',
+              });
+            if (availableFlights) {
+              return await this.displayFlights(
+                query.message.chat.id,
+                sessionReturn.language,
+                'returnMarkup',
+                availableFlights.data,
+              );
+            }
+          }
+          return;
+
+        case '/searchMultiCityFlight':
+          const sessionMultiCity = await this.databaseService.session.findFirst(
+            {
+              where: { chat_id: query.message.chat.id },
+            },
+          );
+          if (sessionMultiCity) {
+            const availableFlights =
+              await this.flightBookingService.searchAvailableMulticityFlight(
+                JSON.parse(sessionMultiCity.multicitySearchData),
+              );
+            if (availableFlights) {
+              console.log(availableFlights);
+              return await this.displayFlights(
+                query.message.chat.id,
+                sessionMultiCity.language,
+                'multiCityMarkup',
+                availableFlights,
+              );
+            }
+          }
+          return;
+
         default:
           console.log('default');
           return await this.wingBot.sendMessage(
@@ -1465,4 +1566,150 @@ export class BotService {
       console.log(error);
     }
   };
+
+  departureCitySelection = async (chatId) => {
+    try {
+      const departureCityPrompt = await this.wingBot.sendMessage(
+        chatId,
+        "🏠 What's your departure city? For example, Milan.",
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const session = await this.databaseService.session.findFirst({
+        where: { chat_id: chatId },
+      });
+      if (session) {
+        const promptIds = JSON.parse(session.departureCityPromptId);
+        console.log('prompts :', promptIds['messageId']);
+        await this.updateUserSession(chatId, {
+          departureCityPromptId: JSON.stringify({
+            messageId: [
+              ...JSON.parse(session.departureCityPromptId)['messageId'],
+              departureCityPrompt.message_id,
+            ],
+          }),
+        });
+        return;
+      }
+      return;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  destinationCitySelection = async (chatId) => {
+    try {
+      const destinationCityPrompt = await this.wingBot.sendMessage(
+        chatId,
+        "🛫 What's your destination? For example, Cologne.",
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const session = await this.databaseService.session.findFirst({
+        where: { chat_id: chatId },
+      });
+      if (session) {
+        await this.updateUserSession(chatId, {
+          destinationCityPromptId: JSON.stringify({
+            messageId: [
+              ...JSON.parse(session.destinationCityPromptId)['messageId'],
+              destinationCityPrompt.message_id,
+            ],
+          }),
+        });
+        return;
+      }
+      return;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  departureDateSelection = async (chatId) => {
+    try {
+      const departureDatePromptId = await this.wingBot.sendMessage(
+        chatId,
+        '📅 Specify the date of departure- "DD/MM/YYYY" (e.g: 20/06/2024).',
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const session = await this.databaseService.session.findFirst({
+        where: { chat_id: chatId },
+      });
+      if (session) {
+        await this.databaseService.session.updateMany({
+          where: { chat_id: chatId },
+          data: {
+            departureDatePromptId: JSON.stringify({
+              messageId: [
+                ...JSON.parse(session.departureDatePromptId)['messageId'],
+                departureDatePromptId.message_id,
+              ],
+            }),
+          },
+        });
+        return;
+      }
+      return;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  returnDateSelection = async (chatId) => {
+    try {
+      const returnDatePromptId = await this.wingBot.sendMessage(
+        chatId,
+        '📅 Specify the date of return- "DD/MM/YYYY" (e.g: 20/06/2024).',
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const session = await this.databaseService.session.findFirst({
+        where: { chat_id: chatId },
+      });
+      if (session) {
+        await this.databaseService.session.updateMany({
+          where: { chat_id: chatId },
+          data: {
+            returnDatePromptId: JSON.stringify({
+              messageId: [
+                ...JSON.parse(session.returnDatePromptId)['messageId'],
+                returnDatePromptId.message_id,
+              ],
+            }),
+          },
+        });
+        return;
+      }
+      return;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  async updateBookingSession(
+    chat_id: number,
+    updateBookingSessionDto: Prisma.BookingSessionUpdateInput,
+  ) {
+    try {
+      return await this.databaseService.bookingSession.updateMany({
+        where: { chat_id },
+        data: updateBookingSessionDto,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
 }
