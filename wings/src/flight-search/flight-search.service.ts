@@ -224,7 +224,6 @@ export class FlightSearchService {
   // Payment
   generatePaymentUrl = async (payload: any) => {
     console.log('This is payload: ', payload);
-    console.log('AUTH TOKEN :', process.env.COINGATE_TOKEN);
     try {
       const payment = await this.httpService.axiosRef.post(
         `https://api-sandbox.coingate.com/v2/orders`,
