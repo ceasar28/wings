@@ -222,39 +222,40 @@ export class FlightSearchService {
   };
 
   // Payment
-  //   generatePaymentUrl = async (payload: any) => {
-  //     console.log('This is payload: ', payload);
-  //     try {
-  //       const payment = await this.httpService.axiosRef.post(
-  //         `https://api-sandbox.coingate.com/v2/orders`,
-  //         {},
-  //         {
-  //           headers: {
-  //             'Content-Type': 'application/json',
-  //             Authorization: `Bearer ${this.config.get('COINGATE_TOKEN')}`,
-  //           },
-  //           params: {
-  //             order_id: payload.order_id,
-  //             price_amount: payload.price,
-  //             price_currency: 'USD',
-  //             receive_currency: 'USD',
-  //             title: payload.title,
-  //             description: 'CheapFlight Bot booking',
-  //             callback_url:
-  //               'https://flightbookingairdropbot-3fu3.onrender.com/bot',
-  //             cancel_url: 'https://t.me/CheapflightCrypto_bot',
-  //             success_url: 'https://t.me/CheapflightCrypto_bot',
-  //             purchaser_email: payload.email,
-  //           },
-  //         },
-  //       );
-  //       if (payment) {
-  //         console.log(payment.data);
-  //         return payment.data;
-  //       }
-  //       return;
-  //     } catch (error) {
-  //       console.error(error);
-  //     }
-  //   };
+  generatePaymentUrl = async (payload: any) => {
+    console.log('This is payload: ', payload);
+    console.log('AUTH TOKEN :', process.env.COINGATE_TOKEN);
+    try {
+      const payment = await this.httpService.axiosRef.post(
+        `https://api-sandbox.coingate.com/v2/orders`,
+        {},
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${process.env.COINGATE_TOKEN}`,
+          },
+          params: {
+            order_id: payload.order_id,
+            price_amount: payload.price,
+            price_currency: 'USD',
+            receive_currency: 'USD',
+            title: payload.title,
+            description: 'CheapFlight Bot booking',
+            callback_url:
+              'https://flightbookingairdropbot-3fu3.onrender.com/bot',
+            cancel_url: 'https://t.me/CheapflightCrypto_bot',
+            success_url: 'https://t.me/CheapflightCrypto_bot',
+            purchaser_email: payload.email,
+          },
+        },
+      );
+      if (payment) {
+        console.log(payment.data);
+        return payment.data;
+      }
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+  };
 }

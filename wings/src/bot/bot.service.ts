@@ -1373,6 +1373,125 @@ export class BotService {
           }
           return;
 
+        // proceed to buy ticket, this triggers the details markup
+        case '/buyTicket':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          const sessionExist =
+            await this.databaseService.bookingSession.findMany({
+              where: {
+                chat_id: query.message.chat.id,
+              },
+            });
+          if (sessionExist) {
+            // delete session first
+            await this.databaseService.bookingSession.deleteMany({
+              where: {
+                chat_id: query.message.chat.id,
+              },
+            });
+
+            // then create new one
+            await this.createBookingSession(query.message.chat.id, {
+              user: {
+                connect: { chat_id: query.message.chat.id },
+              },
+              firstNamePromptId: JSON.stringify({ messageId: [] }),
+              lastNamePromptId: JSON.stringify({ messageId: [] }),
+              emailPromptId: JSON.stringify({ messageId: [] }),
+              userAnswerId: JSON.stringify({ messageId: [] }),
+              searchResultId: bookingDetailsDbId.toString(),
+            });
+          } else {
+            await this.createBookingSession(query.message.chat.id, {
+              firstNamePromptId: JSON.stringify({ messageId: [] }),
+              lastNamePromptId: JSON.stringify({ messageId: [] }),
+              emailPromptId: JSON.stringify({ messageId: [] }),
+              userAnswerId: JSON.stringify({ messageId: [] }),
+              user: {
+                connect: { chat_id: query.message.chat.id },
+              },
+            });
+          }
+          const user = await this.databaseService.user.findFirst({
+            where: { chat_id: query.message.chat.id },
+          });
+          //Number(bookingDetailsDbId)
+          return await this.displayBookingDetails(
+            query.message.chat.id,
+            user.language,
+            bookingDetailsDbId,
+          );
+
+          return;
+
+        case '/firstName':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          return await this.bookingDetailsFirstNameSelection(
+            query.message.chat.id,
+          );
+
+        case '/lastName':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          return await this.bookingDetailsLastNameSelection(
+            query.message.chat.id,
+          );
+
+        case '/bookingEmail':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          return await this.bookingDetailsEmailSelection(query.message.chat.id);
+
+        case '/GeneratePayment':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          if (bookingDetailsDbId) {
+            const flight = await this.databaseService.searchResults.findFirst({
+              where: { id: Number(bookingDetailsDbId) },
+            });
+            const bookingDetail =
+              await this.databaseService.bookingSession.findFirst({
+                where: { chat_id: query.message.chat.id },
+              });
+            if (flight && bookingDetail) {
+              const payload = {
+                order_id: `${bookingDetailsDbId}-${query.message.chat.id}`,
+                price: JSON.parse(flight.searchResults).price,
+                title: JSON.parse(flight.searchResults).summary,
+                email: bookingDetail.email,
+              };
+              const createOrder =
+                await this.flightSearchService.generatePaymentUrl(payload);
+              if (createOrder) {
+                return this.wingBot.sendMessage(
+                  query.message.chat.id,
+                  `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
+                  {
+                    reply_markup: {
+                      inline_keyboard: [
+                        [
+                          {
+                            text: 'Pay',
+                            url: `${createOrder.payment_url}`,
+                          },
+                          {
+                            text: '❌ Cancel',
+                            callback_data: JSON.stringify({
+                              command: '/closedelete',
+                              bookingDetailsDbId: Number(
+                                bookingDetail.searchResultId,
+                              ),
+                            }),
+                          },
+                        ],
+                      ],
+                    },
+                  },
+                );
+              }
+              // make the http call to fetch payment url
+              // users details, send it to the user
+            }
+          }
+          return;
+
         default:
           console.log('default');
           return await this.wingBot.sendMessage(
@@ -1697,6 +1816,26 @@ export class BotService {
     }
   };
 
+  async createBookingSession(
+    chat_id: number,
+    BookingSessionDto: Prisma.BookingSessionCreateInput,
+  ) {
+    try {
+      const exist = await this.databaseService.bookingSession.findFirst({
+        where: { chat_id },
+      });
+      if (!exist) {
+        return this.databaseService.bookingSession.create({
+          data: BookingSessionDto,
+        });
+      } else {
+        return this.updateBookingSession(chat_id, BookingSessionDto);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  }
+
   async updateBookingSession(
     chat_id: number,
     updateBookingSessionDto: Prisma.BookingSessionUpdateInput,
@@ -1774,6 +1913,146 @@ export class BotService {
 
           return;
       }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  displayBookingDetails = async (chatId, language, bookingDetailsDbId) => {
+    try {
+      switch (language) {
+        case 'english':
+          try {
+            const bookingMarkup = bookingDetails_en(
+              bookingDetailsDbId,
+              '',
+              '',
+              '',
+            );
+            const bookingDetails = await this.wingBot.sendMessage(
+              chatId,
+              bookingMarkup.message,
+              {
+                reply_markup: {
+                  inline_keyboard: bookingMarkup.keyBoardMarkup,
+                },
+              },
+            );
+            await this.updateBookingSession(chatId, {
+              bookingDetailMarkdownId: bookingDetails.message_id.toString(),
+            });
+            return bookingDetails;
+          } catch (error) {
+            console.log(error);
+          }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // booking user details first name selection
+  bookingDetailsFirstNameSelection = async (chatId) => {
+    try {
+      const firstNamePrompt = await this.wingBot.sendMessage(
+        chatId,
+        "Passenger's First Name",
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const bookingDetailsession =
+        await this.databaseService.bookingSession.findFirst({
+          where: { chat_id: chatId },
+        });
+      if (bookingDetailsession) {
+        const promptIds = JSON.parse(bookingDetailsession.firstNamePromptId);
+        console.log('prompts :', promptIds['messageId']);
+        await this.updateBookingSession(chatId, {
+          firstNamePromptId: JSON.stringify({
+            messageId: [
+              ...JSON.parse(bookingDetailsession.firstNamePromptId)[
+                'messageId'
+              ],
+              firstNamePrompt.message_id,
+            ],
+          }),
+        });
+        return;
+      }
+      return;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // booking user details last name selection
+  bookingDetailsLastNameSelection = async (chatId) => {
+    try {
+      const lastNamePrompt = await this.wingBot.sendMessage(
+        chatId,
+        "Passenger's Last Name",
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const bookingDetailsession =
+        await this.databaseService.bookingSession.findFirst({
+          where: { chat_id: chatId },
+        });
+      if (bookingDetailsession) {
+        const promptIds = JSON.parse(bookingDetailsession.lastNamePromptId);
+        console.log('prompts :', promptIds['messageId']);
+        await this.updateBookingSession(chatId, {
+          lastNamePromptId: JSON.stringify({
+            messageId: [
+              ...JSON.parse(bookingDetailsession.lastNamePromptId)['messageId'],
+              lastNamePrompt.message_id,
+            ],
+          }),
+        });
+        return;
+      }
+      return;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // booking user details email selection
+  bookingDetailsEmailSelection = async (chatId) => {
+    try {
+      const emailPrompt = await this.wingBot.sendMessage(
+        chatId,
+        "Passenger's Email",
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const bookingDetailsession =
+        await this.databaseService.bookingSession.findFirst({
+          where: { chat_id: chatId },
+        });
+      if (bookingDetailsession) {
+        const promptIds = JSON.parse(bookingDetailsession.emailPromptId);
+        console.log('prompts :', promptIds['messageId']);
+        await this.updateBookingSession(chatId, {
+          emailPromptId: JSON.stringify({
+            messageId: [
+              ...JSON.parse(bookingDetailsession.emailPromptId)['messageId'],
+              emailPrompt.message_id,
+            ],
+          }),
+        });
+        return;
+      }
+      return;
     } catch (error) {
       console.log(error);
     }
