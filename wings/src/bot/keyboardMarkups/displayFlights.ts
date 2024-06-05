@@ -23,6 +23,14 @@ export const displayFlights_en = (details, dbId) => {
   const routeDepartureTime2 = details.legs[1]?.departure || '';
   const routeArrivalTime2 = details.legs[1]?.arrival || '';
   const Price = details.price['raw'] || '';
+  const oneWayStops = details.legs[0]?.stopCount;
+  const returnStops = details.legs[1]?.stopCount;
+  const carriers = {
+    name1: details.legs[0]?.carriers.marketing[0]?.name || '',
+    logo1: details.legs[0]?.carriers.marketing[0]?.logoUrl || '',
+    name2: details.legs[0]?.carriers.marketing[0]?.name || '',
+    logo2: details.legs[0]?.carriers.marketing[0]?.logoUrl || '',
+  };
 
   function convertDateTime(inputDateTime) {
     // Parse the input datetime string
@@ -72,10 +80,10 @@ export const displayFlights_en = (details, dbId) => {
 
   return {
     message: {
-      oneWayMarkup: `📍 <b>${cityFrom} - ${cityTo}</b> \n\n<b>${cityFrom}, ${countryFrom}(${cityFromCode}) - ${cityTo}, ${countryTo}(${cityToCode})</b>\n🔄 Direct\n🕛 Depature: ${convertDateTime(routeDepartureTime)}\n🕛 Arrival: ${convertDateTime(routeArrivalTime)}\n\n💰 Price: $${Price}\n`,
-      returnMarkup: `📍 <b>${cityFrom} - ${cityTo}</b> \n\n<b>${cityFrom}, ${countryFrom}(${cityFromCode}) - ${cityTo}, ${countryTo}(${cityToCode})</b>\n🔄 Direct\n🕛 Depature: ${convertDateTime(routeDepartureTime)}\n🕛 Arrival: ${convertDateTime(routeArrivalTime)}\n\n<b>${cityFrom2}, ${countryFrom2}(${cityFromCode2}) - ${cityTO2},${countryTo2}(${cityToCode2})</b>\n🔄 Direct\n🕛 Depature: ${convertDateTime(routeDepartureTime2)}\n🕛 Arrival: ${convertDateTime(routeArrivalTime2)}\n\n💰 Price: $${Price}\n`,
-      multiCityMarkup: `${details['route']?.map((route) => {
-        return `📍 <b>${route.cityFrom}(${route.cityCodeFrom}) -${route.cityTo}(${route.cityCodeTo}) </b>\n🔄 Direct\n🕛 Depature: ${convertDateTime(route.utc_departure)}\n🕛 Arrival: ${convertDateTime(route.local_arrival)}\n\n`;
+      oneWayMarkup: `📍 <b>${cityFrom} - ${cityTo}</b> \n\n<b>${cityFrom}, ${countryFrom}(${cityFromCode}) - ${cityTo}, ${countryTo}(${cityToCode})</b>\n🔄 Stops: ${oneWayStops}\n🕛 Depature: ${convertDateTime(routeDepartureTime)}\n🕛 Arrival: ${convertDateTime(routeArrivalTime)}\n\n 🛫 ${carriers.name1}\n💰 Price: $${Price}\n`,
+      returnMarkup: `📍 <b>${cityFrom} - ${cityTo}</b> \n\n<b>${cityFrom}, ${countryFrom}(${cityFromCode}) - ${cityTo}, ${countryTo}(${cityToCode})</b>\n🔄 Stops: ${oneWayStops}\n🕛 Depature: ${convertDateTime(routeDepartureTime)}\n🕛 Arrival: ${convertDateTime(routeArrivalTime)}\n🛫 ${carriers.name1}\n\n<b>${cityFrom2}, ${countryFrom2}(${cityFromCode2}) - ${cityTO2},${countryTo2}(${cityToCode2})</b>\n🔄 Stops: ${returnStops}\n🕛 Depature: ${convertDateTime(routeDepartureTime2)}\n🕛 Arrival: ${convertDateTime(routeArrivalTime2)}\n🛬 ${carriers.name2}\n\n💰 Price: $${Price}\n`,
+      multiCityMarkup: `${details.legs?.map((route) => {
+        return `📍 <b>${route.origin['city']}(${route.origin['displayCode']}) -${route.destination['city']}(${route.destination['displayCode']}) </b>\n🔄 Stops: ${route.stopCount}\n🕛 Depature: ${convertDateTime(route.departure)}\n🕛 Arrival: ${convertDateTime(route.arrival)}\n\🛫 ${route.carriers.marketing[0]?.name}\n\n`;
       })}💰 Price: $${Price}\n`,
     },
     oneWayMarkup: [

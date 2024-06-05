@@ -6,21 +6,21 @@ export class FlightSearchService {
   // INJECTING HTTPservice
   constructor(private readonly httpService: HttpService) {}
   //get all Carries
-  getAllCarrier = async (id: string) => {
-    const allCarriers = await this.httpService.axiosRef.get(
-      'https://tequila-api.kiwi.com/carriers',
-    );
-    let carrier: object;
-    if (allCarriers) {
-      allCarriers.data.map((data) => {
-        if (data.id === id) {
-          return (carrier = data);
-        }
-      });
-    }
+  // getAllCarrier = async (id: string) => {
+  //   const allCarriers = await this.httpService.axiosRef.get(
+  //     'https://tequila-api.kiwi.com/carriers',
+  //   );
+  //   let carrier: object;
+  //   if (allCarriers) {
+  //     allCarriers.data.map((data) => {
+  //       if (data.id === id) {
+  //         return (carrier = data);
+  //       }
+  //     });
+  //   }
 
-    return carrier;
-  };
+  //   return carrier;
+  // };
 
   // get airports
   searchAirport = async (query: string) => {
@@ -110,92 +110,112 @@ export class FlightSearchService {
     }
   };
 
-  //   searchAvailableReturnFlight = async (query: any) => {
-  //     try {
-  //       const availableFlights = await this.httpService.axiosRef.get(
-  //         `https://api.tequila.kiwi.com/v2/search`,
-  //         {
-  //           headers: {
-  //             'Content-Type': 'application/json',
-  //             apiKey: this.config.get('KIWI_API_KEY'),
-  //           },
-  //           params: {
-  //             fly_from: query.from,
-  //             fly_to: query.to,
-  //             date_from: query.date_from,
-  //             return_from: query.return_from,
-  //             return_to: query.return_to,
-  //             max_fly_duration: 24,
-  //             ret_from_diff_city: false,
-  //             ret_to_diff_city: false,
-  //             adults: 1,
-  //             selected_cabins: 'M',
-  //             adult_hold_bag: 1,
-  //             adult_hand_bag: 1,
-  //             only_working_days: false,
-  //             only_weekends: false,
-  //             curr: query.currency,
-  //             max_stopovers: 0,
-  //             max_sector_stopovers: 0,
-  //             vehicle_type: 'aircraft',
-  //             enable_vi: true,
-  //             sort: 'price',
-  //             limit: 4,
-  //           },
-  //         },
-  //       );
-  //       if (availableFlights) {
-  //         console.log(availableFlights.data);
-  //         return availableFlights.data;
-  //       }
-  //       return;
-  //     } catch (error) {
-  //       console.error(error);
-  //     }
-  //   };
+  searchAvailableReturnFlight = async (query: any) => {
+    function convertDateFormat(dateString) {
+      // Split the input date string into day, month, and year
+      const [day, month, year] = dateString.split('/');
 
-  //   searchAvailableMulticityFlight = async (payload: any) => {
-  //     console.log('This is payload: ', payload);
-  //     try {
-  //       const availableFlights = await this.httpService.axiosRef.post(
-  //         `https://api.tequila.kiwi.com/v2/flights_multi`,
-  //         payload,
-  //         {
-  //           headers: {
-  //             'Content-Type': 'application/json',
-  //             apiKey: this.config.get('KIWI_MULTI_CITY_KEY'),
-  //           },
-  //           params: {
-  //             max_fly_duration: 24,
-  //             ret_from_diff_city: false,
-  //             ret_to_diff_city: false,
-  //             adults: 1,
-  //             selected_cabins: 'M',
-  //             adult_hold_bag: 1,
-  //             adult_hand_bag: 1,
-  //             only_working_days: false,
-  //             only_weekends: false,
-  //             curr: 'USD',
-  //             max_stopovers: 0,
-  //             max_sector_stopovers: 0,
-  //             vehicle_type: 'aircraft',
-  //             enable_vi: true,
-  //             sort: 'price',
-  //             limit: 5,
-  //           },
-  //         },
-  //       );
-  //       if (availableFlights) {
-  //         console.log(availableFlights.data);
-  //         return availableFlights.data;
-  //       }
-  //       return;
-  //     } catch (error) {
-  //       console.error(error);
-  //     }
-  //   };
+      // Return the date in the format yyyy-mm-dd
+      return `${year}-${month}-${day}`;
+    }
+    try {
+      const availableFlights = await this.httpService.axiosRef.get(
+        `https://sky-scanner3.p.rapidapi.com/flights/search-roundtrip`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-RapidAPI-Key': process.env.RapidAPI_KEY,
+            'X-RapidAPI-Host': process.env.RapidAPI_HOST,
+          },
+          params: {
+            fromEntityId: query.from,
+            toEntityId: query.to,
+            departDate: convertDateFormat(query.date_from),
+            returnDate: convertDateFormat(query.date_to),
+          },
+        },
+      );
+      if (availableFlights) {
+        if (availableFlights.data['data'].context['status'] === 'incomplete') {
+          const completeFlights = await this.httpService.axiosRef.get(
+            `https://sky-scanner3.p.rapidapi.com/flights/search-incomplete`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'X-RapidAPI-Key': process.env.RapidAPI_KEY,
+                'X-RapidAPI-Host': process.env.RapidAPI_HOST,
+              },
+              params: {
+                sessionId: availableFlights.data['data'].context['sessionId'],
+              },
+            },
+          );
+          if (completeFlights) {
+            console.log(completeFlights.data['data'].itineraries);
+            return completeFlights.data['data'].itineraries;
+          }
+        }
+        console.log(availableFlights.data);
+        return availableFlights.data['data'].itineraries;
+      }
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
-  // save booking details
+  searchAvailableMulticityFlight = async (payload: any) => {
+    const data = {
+      market: 'US',
+      locale: 'en-US',
+      currency: 'USD',
+      adults: 1,
+      children: 0,
+      infants: 0,
+      cabinClass: 'economy',
+      stops: ['direct', '1stop', '2stops'],
+      flights: payload.flights,
+    };
+    try {
+      const availableFlights = await this.httpService.axiosRef.post(
+        `https://sky-scanner3.p.rapidapi.com/flights/search-multi-city`,
+        data,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            'X-RapidAPI-Key': process.env.RapidAPI_KEY,
+            'X-RapidAPI-Host': process.env.RapidAPI_HOST,
+          },
+        },
+      );
+      if (availableFlights) {
+        if (availableFlights.data['data'].context['status'] === 'incomplete') {
+          const completeFlights = await this.httpService.axiosRef.get(
+            `https://sky-scanner3.p.rapidapi.com/flights/search-incomplete`,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                'X-RapidAPI-Key': process.env.RapidAPI_KEY,
+                'X-RapidAPI-Host': process.env.RapidAPI_HOST,
+              },
+              params: {
+                sessionId: availableFlights.data['data'].context['sessionId'],
+              },
+            },
+          );
+          if (completeFlights) {
+            console.log(completeFlights.data['data'].itineraries);
+            return completeFlights.data['data'].itineraries;
+          }
+        }
+        console.log(availableFlights.data);
+        return availableFlights.data['data'].itineraries;
+      }
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   saveBookingDetails = async (query: any) => {
     console.log(query);

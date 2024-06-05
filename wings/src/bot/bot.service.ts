@@ -98,6 +98,10 @@ export class BotService {
 
   //Event handler for users inputs
   handleUserTextInputs = async (msg: any, session: any) => {
+    function convertDateFormat(dateString) {
+      const [day, month, year] = dateString.split('/');
+      return `${year}-${month}-${day}`;
+    }
     try {
       // check if there is a booking detail session
       const bookingDetailSession =
@@ -418,17 +422,12 @@ export class BotService {
             } else if (latestSession.multi_city_search_state) {
               await this.updateUserSession(msg.chat.id, {
                 multicitySearchData: JSON.stringify({
-                  requests: [
-                    ...JSON.parse(latestSession.multicitySearchData)[
-                      'requests'
-                    ],
+                  flights: [
+                    ...JSON.parse(latestSession.multicitySearchData)['flights'],
                     {
-                      fly_to: latestSession.destinationCityCode,
-                      fly_from: latestSession.departureCityCode,
-                      date_from: msg.text.trim(),
-                      adults: 1,
-                      limit: 3,
-                      curr: 'USD',
+                      fromEntityId: latestSession.destinationCityCode,
+                      toEntityId: latestSession.departureCityCode,
+                      departDate: convertDateFormat(msg.text.trim()),
                     },
                   ],
                 }),
@@ -446,7 +445,7 @@ export class BotService {
                   '',
                   '',
                   '',
-                  JSON.parse(multicityData.multicitySearchData)['requests'],
+                  JSON.parse(multicityData.multicitySearchData)['flights'],
                 );
                 //TODO: change markup to multicity
                 await this.wingBot.editMessageText(
@@ -1222,7 +1221,7 @@ export class BotService {
               userAnswerId: JSON.stringify({ messageId: [] }),
               departureDatePromptId: JSON.stringify({ messageId: [] }),
               returnDatePromptId: JSON.stringify({ messageId: [] }),
-              multicitySearchData: JSON.stringify({ requests: [] }),
+              multicitySearchData: JSON.stringify({ flights: [] }),
             });
           } else {
             await this.createSearchSession(query.message.chat.id, {
@@ -1235,7 +1234,7 @@ export class BotService {
               userAnswerId: JSON.stringify({ messageId: [] }),
               departureDatePromptId: JSON.stringify({ messageId: [] }),
               returnDatePromptId: JSON.stringify({ messageId: [] }),
-              multicitySearchData: JSON.stringify({ requests: [] }),
+              multicitySearchData: JSON.stringify({ flights: [] }),
             });
           }
           return await this.searchFlight(
@@ -1327,53 +1326,52 @@ export class BotService {
           }
           return;
 
-        // case '/searchReturnFlight':
-        //   const sessionReturn = await this.databaseService.session.findFirst({
-        //     where: { chat_id: query.message.chat.id },
-        //   });
-        //   if (sessionReturn) {
-        //     const availableFlights =
-        //       await this.flightSearchService.searchAvailableReturnFlight({
-        //         from: sessionReturn.departureCityCode,
-        //         to: sessionReturn.destinationCityCode,
-        //         date_from: sessionReturn.departureDate,
-        //         return_from: sessionReturn.returnDate,
-        //         return_to: sessionReturn.returnDate,
-        //         currency: 'USD',
-        //       });
-        //     if (availableFlights) {
-        //       return await this.displayFlights(
-        //         query.message.chat.id,
-        //         sessionReturn.language,
-        //         'returnMarkup',
-        //         availableFlights.data,
-        //       );
-        //     }
-        //   }
-        //   return;
+        case '/searchReturnFlight':
+          const sessionReturn = await this.databaseService.session.findFirst({
+            where: { chat_id: query.message.chat.id },
+          });
+          if (sessionReturn) {
+            const availableFlights =
+              await this.flightSearchService.searchAvailableReturnFlight({
+                from: sessionReturn.departureCityCode,
+                to: sessionReturn.destinationCityCode,
+                date_from: sessionReturn.departureDate,
+                date_to: sessionReturn.returnDate,
+                currency: 'USD',
+              });
+            if (availableFlights) {
+              return await this.displayFlights(
+                query.message.chat.id,
+                sessionReturn.language,
+                'returnMarkup',
+                availableFlights,
+              );
+            }
+          }
+          return;
 
-        // case '/searchMultiCityFlight':
-        //   const sessionMultiCity = await this.databaseService.session.findFirst(
-        //     {
-        //       where: { chat_id: query.message.chat.id },
-        //     },
-        //   );
-        //   if (sessionMultiCity) {
-        //     const availableFlights =
-        //       await this.flightSearchService.searchAvailableMulticityFlight(
-        //         JSON.parse(sessionMultiCity.multicitySearchData),
-        //       );
-        //     if (availableFlights) {
-        //       console.log(availableFlights);
-        //       return await this.displayFlights(
-        //         query.message.chat.id,
-        //         sessionMultiCity.language,
-        //         'multiCityMarkup',
-        //         availableFlights,
-        //       );
-        //     }
-        //   }
-        //   return;
+        case '/searchMultiCityFlight':
+          const sessionMultiCity = await this.databaseService.session.findFirst(
+            {
+              where: { chat_id: query.message.chat.id },
+            },
+          );
+          if (sessionMultiCity) {
+            const availableFlights =
+              await this.flightSearchService.searchAvailableMulticityFlight(
+                JSON.parse(sessionMultiCity.multicitySearchData),
+              );
+            if (availableFlights) {
+              console.log(availableFlights);
+              return await this.displayFlights(
+                query.message.chat.id,
+                sessionMultiCity.language,
+                'multiCityMarkup',
+                availableFlights,
+              );
+            }
+          }
+          return;
 
         default:
           console.log('default');

@@ -10,7 +10,7 @@ export const booking_en = (from?, to?, date1?, date2?, multicityData?) => {
       returnMarkup: ` ⬅️➡️🛫. Search for available flights.\n\n1. Select Departure city\n\n2. Select Destination City\n\n3. Pick date of departure \n\n4. Pick date of return `,
       multiCityMarkup: ` ✈ ✈. Search for available Multi-city flights.\n1. Click on the add Button to add flights\n\n${multicityDatas.map(
         (data) => {
-          return `📍 ${data.fly_from} - ${data.fly_to}: ${data.date_from} \n`;
+          return `📍 ${data.fromEntityId} - ${data.toEntityId}: ${data.departDate} \n`;
         },
       )}`,
     },
