@@ -14,6 +14,7 @@ import { DatabaseService } from 'src/database/database.service';
 import { Prisma } from '@prisma/client';
 import { FlightSearchService } from 'src/flight-search/flight-search.service';
 import * as qrcode from 'qrcode';
+import { createQR, createQROptions } from '@solana/pay';
 
 @Injectable()
 export class BotService {
@@ -1460,12 +1461,10 @@ export class BotService {
               const createOrder =
                 await this.flightSearchService.generateSolanaPayUrl(payload);
               if (createOrder) {
-                console.log('code here :', createOrder);
-                const qrCodeDataURL = await qrcode.toDataURL(createOrder.url);
-
+                console.log(createOrder.url);
                 return this.wingBot.sendMessage(
                   query.message.chat.id,
-                  `<img src="${qrCodeDataURL}" alt="QR Code" />`,
+                  `<a href="solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking">Click here</a>`,
                   {
                     parse_mode: 'HTML',
                     // caption: `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,

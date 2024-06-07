@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { encodeURL, findReference, validateTransfer } from '@solana/pay';
+import {
+  encodeURL,
+  findReference,
+  validateTransfer,
+  parseURL,
+  createQR,
+} from '@solana/pay';
 import BigNumber from 'bignumber.js';
 
 @Injectable()
@@ -285,7 +291,6 @@ export class FlightSearchService {
       });
       if (url) {
         const ref = reference.toBase58();
-        console.log({ link: url.toString(), ref });
         return { url: url.toString(), ref };
       }
       return;
@@ -294,3 +299,5 @@ export class FlightSearchService {
     }
   };
 }
+
+//http://api.qrserver.com/v1/create-qr-code/?data=${createOrder.url}&size=700x700`
