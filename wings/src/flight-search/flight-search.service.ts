@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
+import { Connection, Keypair, PublicKey } from '@solana/web3.js';
+import { encodeURL, findReference, validateTransfer } from '@solana/pay';
+import BigNumber from 'bignumber.js';
 
 @Injectable()
 export class FlightSearchService {
@@ -221,7 +224,7 @@ export class FlightSearchService {
     console.log(query);
   };
 
-  // Payment
+  // Payment Coingate
   generatePaymentUrl = async (payload: any) => {
     console.log('This is payload: ', payload);
     try {
@@ -255,6 +258,39 @@ export class FlightSearchService {
       return;
     } catch (error) {
       console.error(error);
+    }
+  };
+
+  // solana payment
+  generateSolanaPayUrl = async (payload: any) => {
+    console.log(payload);
+    try {
+      const myWallet = new PublicKey(
+        '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
+      );
+      const recipient = new PublicKey(myWallet);
+      const amount = new BigNumber(payload.amount); // 0.0001 SOL
+      const label = 'Wings Flight Bot';
+      const memo = 'Flight Booking';
+      const reference = new Keypair().publicKey;
+      const message = payload.message;
+
+      const url: URL = encodeURL({
+        recipient,
+        amount,
+        reference,
+        label,
+        message,
+        memo,
+      });
+      if (url) {
+        const ref = reference.toBase58();
+        console.log({ link: url.toString(), ref });
+        return { url: url.toString(), ref };
+      }
+      return;
+    } catch (error) {
+      console.error('this is error :', error);
     }
   };
 }

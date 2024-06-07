@@ -13,6 +13,7 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { Prisma } from '@prisma/client';
 import { FlightSearchService } from 'src/flight-search/flight-search.service';
+import * as qrcode from 'qrcode';
 
 @Injectable()
 export class BotService {
@@ -1452,24 +1453,28 @@ export class BotService {
               });
             if (flight && bookingDetail) {
               const payload = {
-                order_id: `${bookingDetailsDbId}-${query.message.chat.id}`,
-                price: JSON.parse(flight.searchResults).price,
-                title: JSON.parse(flight.searchResults).summary,
-                email: bookingDetail.email,
+                amount: JSON.parse(flight.searchResults).amount,
+                message: JSON.parse(flight.searchResults).summary,
+                chatId: query.message.chat.id,
               };
               const createOrder =
-                await this.flightSearchService.generatePaymentUrl(payload);
+                await this.flightSearchService.generateSolanaPayUrl(payload);
               if (createOrder) {
+                console.log('code here :', createOrder);
+                const qrCodeDataURL = await qrcode.toDataURL(createOrder.url);
+
                 return this.wingBot.sendMessage(
                   query.message.chat.id,
-                  `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
+                  `<img src="${qrCodeDataURL}" alt="QR Code" />`,
                   {
+                    parse_mode: 'HTML',
+                    // caption: `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
                     reply_markup: {
                       inline_keyboard: [
                         [
                           {
                             text: 'Pay',
-                            url: `${createOrder.payment_url}`,
+                            url: `https://google.come`,
                           },
                           {
                             text: '❌ Cancel',
@@ -1879,28 +1884,92 @@ export class BotService {
               flights.map(async (flight) => {
                 console.log(flight);
                 try {
-                  const BookingDetails = JSON.stringify({
-                    id: ` ${flight.id}`,
-                    price: `${flight.price['raw']}`,
-                    summary: `${flight.cityFrom || ''} - ${flight.cityTo || ''}`,
-                  });
-                  const saveResultToDb =
-                    await this.databaseService.searchResults.create({
-                      data: { searchResults: BookingDetails, chat_id: chatId },
+                  if (type === 'oneWayMarkup') {
+                    const BookingDetails = JSON.stringify({
+                      id: ` ${flight.id}`,
+                      amount: `${flight.price['raw']}`,
+                      summary: `One-way booking: ${flight.legs[0].origin['city'] || ''} - ${flight.legs[0].destination['city'] || ''}`,
                     });
-                  if (saveResultToDb) {
-                    const markup = await displayFlights_en(
-                      flight,
-                      saveResultToDb.id,
-                    );
-                    return this.wingBot.sendMessage(
-                      chatId,
-                      markup.message[type],
-                      {
-                        reply_markup: { inline_keyboard: markup[type] },
-                        parse_mode: 'HTML',
-                      },
-                    );
+
+                    const saveResultToDb =
+                      await this.databaseService.searchResults.create({
+                        data: {
+                          searchResults: BookingDetails,
+                          chat_id: chatId,
+                        },
+                      });
+                    if (saveResultToDb) {
+                      const markup = await displayFlights_en(
+                        flight,
+                        saveResultToDb.id,
+                      );
+                      return this.wingBot.sendMessage(
+                        chatId,
+                        markup.message[type],
+                        {
+                          reply_markup: { inline_keyboard: markup[type] },
+                          parse_mode: 'HTML',
+                        },
+                      );
+                    }
+                  } else if (type === 'returnMarkup') {
+                    const BookingDetails = JSON.stringify({
+                      id: ` ${flight.id}`,
+                      amount: `${flight.price['raw']}`,
+                      summary: `Return Flight Booking: ${flight.legs[0].origin['city'] || ''} - ${flight.legs[0].destination['city'] || ''}`,
+                    });
+                    const saveResultToDb =
+                      await this.databaseService.searchResults.create({
+                        data: {
+                          searchResults: BookingDetails,
+                          chat_id: chatId,
+                        },
+                      });
+                    if (saveResultToDb) {
+                      const markup = await displayFlights_en(
+                        flight,
+                        saveResultToDb.id,
+                      );
+                      return this.wingBot.sendMessage(
+                        chatId,
+                        markup.message[type],
+                        {
+                          reply_markup: { inline_keyboard: markup[type] },
+                          parse_mode: 'HTML',
+                        },
+                      );
+                    }
+                  } else {
+                    const BookingDetails = JSON.stringify({
+                      id: ` ${flight.id}`,
+                      amount: `${flight.price['raw']}`,
+                      summary: ` Multicity Flight booking: ${flight.legs?.map(
+                        (route) => {
+                          return `${route.origin['city']} - ${route.destination['city']}`;
+                        },
+                      )}`,
+                    });
+                    const saveResultToDb =
+                      await this.databaseService.searchResults.create({
+                        data: {
+                          searchResults: BookingDetails,
+                          chat_id: chatId,
+                        },
+                      });
+                    if (saveResultToDb) {
+                      const markup = await displayFlights_en(
+                        flight,
+                        saveResultToDb.id,
+                      );
+                      return this.wingBot.sendMessage(
+                        chatId,
+                        markup.message[type],
+                        {
+                          reply_markup: { inline_keyboard: markup[type] },
+                          parse_mode: 'HTML',
+                        },
+                      );
+                    }
                   }
                 } catch (error) {
                   console.log(error);
