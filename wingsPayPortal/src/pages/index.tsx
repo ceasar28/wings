@@ -72,6 +72,9 @@ export default function Home() {
             priority
           />
         )}
+        <a href="solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking">
+          Click here
+        </a>
         <div>
           <button
             style={{ cursor: "pointer", padding: "10px", marginRight: "10px" }}
