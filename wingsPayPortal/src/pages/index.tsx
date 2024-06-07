@@ -2,6 +2,7 @@ import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";
 import { createQR } from "@solana/pay";
+import WebApp from "@twa-dev/sdk";
 
 export default function Home() {
   const [qrCode, setQrCode] = useState<string>();
@@ -51,14 +52,15 @@ export default function Home() {
   return (
     <>
       <Head>
-        <title>QuickNode Solana Pay Demo</title>
+        <title>wings Pay portal </title>
         <meta name="description" content="QuickNode Guide: Solana Pay" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/favicon.ico" />
+        {/* <script src="https://telegram.org/js/telegram-web-app.js" async /> */}
       </Head>
       <main className="flex min-h-screen flex-col items-center justify-between p-24">
         <div className="z-10 w-full max-w-5xl items-center justify-between font-mono text-sm lg:flex">
-          <h1 className="text-2xl font-semibold">Event Ticket Pay Demo</h1>
+          <h1 className="text-2xl font-semibold">wings Pay portal</h1>
         </div>
         {qrCode && (
           <Image
