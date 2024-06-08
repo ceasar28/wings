@@ -73,9 +73,7 @@ export default function Home() {
             priority
           />
         )}
-        <a href="https://wings-kappa.vercel.app/">
-          Click here to pay with deeplink
-        </a>
+        <a href="https://seistream.app/">Click here to pay with deeplink</a>
         <CustomLink uri="solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking">
           Open Custom URI
         </CustomLink>
