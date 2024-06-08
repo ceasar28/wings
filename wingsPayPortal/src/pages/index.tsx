@@ -73,17 +73,6 @@ export default function Home() {
             priority
           />
         )}
-
-        <button
-          style={{ cursor: "pointer", padding: "10px", marginRight: "10px" }}
-          onClick="javascript:Telegram.webApp.openLink(`solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking`)"
-        >
-          external link
-        </button>
-        <a href="https://seistream.app/">Click here to pay with deeplink</a>
-        <CustomLink uri="solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking">
-          Open Custom URI
-        </CustomLink>
         <div>
           <button
             style={{ cursor: "pointer", padding: "10px", marginRight: "10px" }}
