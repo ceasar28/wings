@@ -13,8 +13,6 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { Prisma } from '@prisma/client';
 import { FlightSearchService } from 'src/flight-search/flight-search.service';
-import * as qrcode from 'qrcode';
-import { createQR, createQROptions } from '@solana/pay';
 
 @Injectable()
 export class BotService {
@@ -1462,18 +1460,30 @@ export class BotService {
                 await this.flightSearchService.generateSolanaPayUrl(payload);
               if (createOrder) {
                 console.log(createOrder.url);
+                const webApp = 'https://wings-kappa.vercel.app/';
                 return this.wingBot.sendMessage(
                   query.message.chat.id,
-                  `<a href="solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking">Click here</a>`,
+                  `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
                   {
-                    parse_mode: 'HTML',
-                    // caption: `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
                     reply_markup: {
                       inline_keyboard: [
                         [
                           {
-                            text: 'Pay',
-                            url: `https://google.come`,
+                            text: 'deeplink',
+                            url: `https://dc3v8d3l-3000.eun1.devtunnels.ms/flight-search/${bookingDetail.id}`,
+                          },
+                          {
+                            text: '✅ Verify',
+                            callback_data: JSON.stringify({
+                              command: '/verifyPayment',
+                              bookingDetailsDbId: Number(bookingDetail.id),
+                            }),
+                          },
+                        ],
+                        [
+                          {
+                            text: 'Scan to pay',
+                            web_app: { url: `${webApp}` },
                           },
                           {
                             text: '❌ Cancel',
@@ -1495,6 +1505,138 @@ export class BotService {
             }
           }
           return;
+
+        case '/GenerateBonkPayment':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          if (bookingDetailsDbId) {
+            const flight = await this.databaseService.searchResults.findFirst({
+              where: { id: Number(bookingDetailsDbId) },
+            });
+            const bookingDetail =
+              await this.databaseService.bookingSession.findFirst({
+                where: { chat_id: query.message.chat.id },
+              });
+            if (flight && bookingDetail) {
+              const payload = {
+                amount: JSON.parse(flight.searchResults).amount,
+                message: JSON.parse(flight.searchResults).summary,
+                chatId: query.message.chat.id,
+              };
+              const createOrder =
+                await this.flightSearchService.generateBonkPayUrl(payload);
+              if (createOrder) {
+                console.log(createOrder.url);
+                const webApp = 'https://wings-kappa.vercel.app/';
+                return this.wingBot.sendMessage(
+                  query.message.chat.id,
+                  `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
+                  {
+                    reply_markup: {
+                      inline_keyboard: [
+                        [
+                          {
+                            text: 'deeplink',
+                            url: `https://dc3v8d3l-3000.eun1.devtunnels.ms/flight-search/${bookingDetail.id}`,
+                          },
+                          {
+                            text: '✅ Verify',
+                            callback_data: JSON.stringify({
+                              command: '/verifyPayment',
+                              bookingDetailsDbId: Number(bookingDetail.id),
+                            }),
+                          },
+                        ],
+                        [
+                          {
+                            text: 'Scan to pay',
+                            web_app: { url: `${webApp}` },
+                          },
+                          {
+                            text: '❌ Cancel',
+                            callback_data: JSON.stringify({
+                              command: '/closedelete',
+                              bookingDetailsDbId: Number(
+                                bookingDetail.searchResultId,
+                              ),
+                            }),
+                          },
+                        ],
+                      ],
+                    },
+                  },
+                );
+              }
+              // make the http call to fetch payment url
+              // users details, send it to the user
+            }
+          }
+          return;
+
+        case '/verifyPayment':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          try {
+            const session = await this.databaseService.bookingSession.findFirst(
+              { where: { id: Number(bookingDetailsDbId) } },
+            );
+            if (!session) {
+              return;
+            }
+            const verify = await this.flightSearchService.verifyTransaction(
+              session.id,
+            );
+            if (verify) {
+              await this.wingBot.editMessageReplyMarkup(
+                {
+                  inline_keyboard: [
+                    [
+                      // {
+                      //   text: 'deeplink',
+                      //   url: `https://dc3v8d3l-3000.eun1.devtunnels.ms/flight-search/${bookingDetail.id}`,
+                      // },
+                      {
+                        text: 'Payment Verified ✅',
+                        callback_data: JSON.stringify({
+                          command: '/newSearch',
+                          language: 'english',
+                        }),
+                      },
+                    ],
+                    // [
+                    //   {
+                    //     text: 'Scan to pay',
+                    //     web_app: { url: `${webApp}` },
+                    //   },
+                    //   {
+                    //     text: '❌ Cancel',
+                    //     callback_data: JSON.stringify({
+                    //       command: '/closedelete',
+                    //       bookingDetailsDbId: Number(
+                    //         bookingDetail.searchResultId,
+                    //       ),
+                    //     }),
+                    //   },
+                    // ],
+                  ],
+                },
+
+                {
+                  chat_id: query.message.chat.id,
+                  message_id: query.message.message_id,
+                },
+              );
+              return await this.wingBot.sendMessage(
+                session.chat_id.toString(),
+                'verified',
+              );
+            }
+            return await this.wingBot.sendMessage(
+              session.chat_id.toString(),
+              'Payment Not verified',
+            );
+          } catch (error) {
+            console.log(error);
+            return;
+          }
 
         default:
           console.log('default');

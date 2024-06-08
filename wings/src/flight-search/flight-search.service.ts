@@ -1,19 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import {
-  encodeURL,
-  findReference,
-  validateTransfer,
-  parseURL,
-  createQR,
-} from '@solana/pay';
+import { encodeURL, findReference, validateTransfer } from '@solana/pay';
 import BigNumber from 'bignumber.js';
+import { DatabaseService } from 'src/database/database.service';
 
 @Injectable()
 export class FlightSearchService {
+  private quicknodeEndpoint =
+    'https://nd-818-433-873.p2pify.com/9853f3a0477128226a6bd8e0ffb2ebfb'; // Replace with your QuickNode
+
   // INJECTING HTTPservice
-  constructor(private readonly httpService: HttpService) {}
+  constructor(
+    private readonly httpService: HttpService,
+    private readonly databaseService: DatabaseService,
+  ) {}
   //get all Carries
   // getAllCarrier = async (id: string) => {
   //   const allCarriers = await this.httpService.axiosRef.get(
@@ -291,11 +292,125 @@ export class FlightSearchService {
       });
       if (url) {
         const ref = reference.toBase58();
+        // update user booking session
+        await this.databaseService.bookingSession.updateMany({
+          where: {
+            chat_id: payload.chatId,
+          },
+          data: {
+            ref,
+            amount: amount.toString(),
+            recipient: recipient.toBase58(),
+            message,
+            deeplink: url.toString(),
+          },
+        });
         return { url: url.toString(), ref };
       }
       return;
     } catch (error) {
       console.error('this is error :', error);
+    }
+  };
+
+  generateBonkPayUrl = async (payload: any) => {
+    console.log(payload);
+    try {
+      const myWallet = new PublicKey(
+        '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
+      );
+      const recipient = new PublicKey(myWallet);
+      const amount = new BigNumber(payload.amount); // 0.0001 SOL
+      const label = 'Wings Flight Bot';
+      const memo = 'Flight Booking';
+      const reference = new Keypair().publicKey;
+      const message = payload.message;
+      const bonkMintAddr = new PublicKey(
+        'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      );
+
+      const url: URL = encodeURL({
+        recipient,
+        amount,
+        splToken: bonkMintAddr,
+        reference,
+        label,
+        message,
+        memo,
+      });
+      if (url) {
+        const ref = reference.toBase58();
+        // update user booking session
+        await this.databaseService.bookingSession.updateMany({
+          where: {
+            chat_id: payload.chatId,
+          },
+          data: {
+            ref,
+            amount: amount.toString(),
+            recipient: recipient.toBase58(),
+            message,
+            deeplink: url.toString(),
+          },
+        });
+        return { url: url.toString(), ref };
+      }
+      return;
+    } catch (error) {
+      console.error('this is error :', error);
+    }
+  };
+
+  verifyTransaction = async (Id: any) => {
+    try {
+      // check for the users booking sessions
+      const bookingSessions =
+        await this.databaseService.bookingSession.findFirst({
+          where: {
+            id: Id,
+          },
+        });
+      if (!bookingSessions.ref) {
+        return {
+          status: 'error',
+          message: 'Payment request not found',
+        };
+      }
+      // 2 - Establish a Connection to the Solana Cluster
+      const connection = new Connection(this.quicknodeEndpoint, 'confirmed');
+      console.log('recipient', bookingSessions.recipient);
+      console.log('amount', bookingSessions.amount);
+      console.log('reference', bookingSessions.ref);
+      console.log('message', bookingSessions.message);
+
+      // 3 - Find the transaction reference
+      const found = await findReference(
+        connection,
+        new PublicKey(bookingSessions.ref),
+      );
+      console.log(found.signature);
+
+      // 4 - Validate the transaction
+      const response = await validateTransfer(
+        connection,
+        found.signature,
+        {
+          recipient: new PublicKey(bookingSessions.recipient),
+          amount: BigNumber(bookingSessions.amount),
+          splToken: undefined,
+          reference: new PublicKey(bookingSessions.ref),
+          //memo
+        },
+        { commitment: 'confirmed' },
+      );
+      // 5 - Delete the payment request from local storage and return the response
+      // if (response) {
+      //   paymentRequests.delete(reference.toBase58());
+      // }
+      console.log(response);
+      return response;
+    } catch (error) {
+      console.log(error);
     }
   };
 }
