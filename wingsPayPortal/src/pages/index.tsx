@@ -2,6 +2,7 @@ import Head from "next/head";
 import Image from "next/image";
 import { useState } from "react";
 import { createQR } from "@solana/pay";
+import CustomLink from "../components/customuriLink";
 import WebApp from "@twa-dev/sdk";
 
 export default function Home() {
@@ -48,6 +49,24 @@ export default function Home() {
       alert("Transaction not found");
     }
   };
+  // Function to handle button click
+  const handleButtonClick = async () => {
+    // Use fetch API to navigate to the URL
+    const url =
+      "solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking";
+    fetch(url)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        // Redirect to the URL
+        window.location.href = response.url;
+      })
+      .catch((error) => {
+        console.error("There was a problem with the fetch operation:", error);
+        // Handle error
+      });
+  };
 
   return (
     <>
@@ -75,6 +94,9 @@ export default function Home() {
         <a href="solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking">
           Click here
         </a>
+        <CustomLink uri="solana:7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE?amount=60&reference=9YppjMp39jodvAnauFzvqtV6wEXSyptCjNQggFBubuFH&label=Wings+Flight+Bot&message=One-way+booking%3A+Enugu+-+Lagos&memo=Flight+Booking">
+          Open Custom URI
+        </CustomLink>
         <div>
           <button
             style={{ cursor: "pointer", padding: "10px", marginRight: "10px" }}
@@ -85,7 +107,7 @@ export default function Home() {
           {reference && (
             <button
               style={{ cursor: "pointer", padding: "10px" }}
-              onClick={handleVerifyClick}
+              onClick={handleButtonClick}
             >
               Verify Transaction
             </button>
