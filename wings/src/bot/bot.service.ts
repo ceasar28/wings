@@ -1581,6 +1581,7 @@ export class BotService {
             if (!session) {
               return;
             }
+            // fetch the search Result
             const verify = await this.flightSearchService.verifyTransaction(
               session.id,
             );
@@ -1624,10 +1625,20 @@ export class BotService {
                   message_id: query.message.message_id,
                 },
               );
-              return await this.wingBot.sendMessage(
-                session.chat_id.toString(),
-                'verified',
-              );
+              // fetch flight details
+              const flightDetails =
+                await this.flightSearchService.searchFlightDetails(session);
+
+              if (flightDetails) {
+                await this.wingBot.sendMessage(
+                  session.chat_id.toString(),
+                  `Status: Paid\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nPrice: ${flightDetails.price}\n\nDeeplinks : ${Array.from(
+                    flightDetails.flightDeeplinks,
+                  ).map((link: any) => {
+                    return `Agent name: ${link.agentName}\nlink: ${link.url}\nPrice: ${link.price}`;
+                  })}`,
+                );
+              }
             }
             return await this.wingBot.sendMessage(
               session.chat_id.toString(),
@@ -2002,7 +2013,7 @@ export class BotService {
         case 'english':
           try {
             console.log(flights);
-            if (flights.length === 0) {
+            if (flights['completeFlights'].length === 0) {
               const newSearchMarkup = [
                 [
                   {
@@ -2022,14 +2033,16 @@ export class BotService {
                 },
               );
             } else {
-              flights.map(async (flight) => {
+              flights['completeFlights'].map(async (flight) => {
                 console.log(flight);
                 try {
                   if (type === 'oneWayMarkup') {
                     const BookingDetails = JSON.stringify({
-                      id: ` ${flight.id}`,
+                      token: `${flights.token}`,
+                      id: `${flight.id}`,
                       amount: `${flight.price['raw']}`,
                       summary: `One-way booking: ${flight.legs[0].origin['city'] || ''} - ${flight.legs[0].destination['city'] || ''}`,
+                      airline: `${flight.legs[0]?.carriers.marketing[0]?.name}`,
                     });
 
                     const saveResultToDb =
@@ -2055,9 +2068,11 @@ export class BotService {
                     }
                   } else if (type === 'returnMarkup') {
                     const BookingDetails = JSON.stringify({
-                      id: ` ${flight.id}`,
+                      token: `${flights.token}`,
+                      id: `${flight.id}`,
                       amount: `${flight.price['raw']}`,
                       summary: `Return Flight Booking: ${flight.legs[0].origin['city'] || ''} - ${flight.legs[0].destination['city'] || ''}`,
+                      airline: `${flight.legs[0]?.carriers.marketing[0]?.name}`,
                     });
                     const saveResultToDb =
                       await this.databaseService.searchResults.create({
@@ -2082,13 +2097,17 @@ export class BotService {
                     }
                   } else {
                     const BookingDetails = JSON.stringify({
-                      id: ` ${flight.id}`,
+                      token: `${flights.token}`,
+                      id: `${flight.id}`,
                       amount: `${flight.price['raw']}`,
                       summary: ` Multicity Flight booking: ${flight.legs?.map(
                         (route) => {
                           return `${route.origin['city']} - ${route.destination['city']}`;
                         },
                       )}`,
+                      airline: `${flight.legs?.map((route) => {
+                        return `${route.carriers.marketing[0]?.name}`;
+                      })}`,
                     });
                     const saveResultToDb =
                       await this.databaseService.searchResults.create({

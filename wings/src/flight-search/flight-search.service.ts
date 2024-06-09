@@ -107,11 +107,19 @@ export class FlightSearchService {
           );
           if (completeFlights) {
             console.log(completeFlights.data['data'].itineraries);
-            return completeFlights.data['data'].itineraries;
+            console.log(availableFlights.data.data['token']);
+            return {
+              token: availableFlights.data.data['token'],
+              completeFlights: completeFlights.data['data'].itineraries,
+            };
           }
         }
         console.log(availableFlights.data);
-        return availableFlights.data['data'].itineraries;
+
+        return {
+          token: availableFlights.data.data['token'],
+          completeFlights: availableFlights.data['data'].itineraries,
+        };
       }
       return;
     } catch (error) {
@@ -161,11 +169,19 @@ export class FlightSearchService {
           );
           if (completeFlights) {
             console.log(completeFlights.data['data'].itineraries);
-            return completeFlights.data['data'].itineraries;
+
+            return {
+              token: availableFlights.data.data['token'],
+              completeFlights: completeFlights.data['data'].itineraries,
+            };
           }
         }
         console.log(availableFlights.data);
-        return availableFlights.data['data'].itineraries;
+
+        return {
+          token: availableFlights.data.data['token'],
+          completeFlights: availableFlights.data['data'].itineraries,
+        };
       }
       return;
     } catch (error) {
@@ -214,11 +230,68 @@ export class FlightSearchService {
           );
           if (completeFlights) {
             console.log(completeFlights.data['data'].itineraries);
-            return completeFlights.data['data'].itineraries;
+            return {
+              token: availableFlights.data.data['token'],
+              completeFlights: completeFlights.data['data'].itineraries,
+            };
           }
         }
         console.log(availableFlights.data);
-        return availableFlights.data['data'].itineraries;
+        return {
+          token: availableFlights.data.data['token'],
+          completeFlights: availableFlights.data['data'].itineraries,
+        };
+      }
+      return;
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  searchFlightDetails = async (session: any) => {
+    try {
+      // fetch searchResult
+      const searchResult = await this.databaseService.searchResults.findFirst({
+        where: { id: Number(session.searchResultId) },
+      });
+      if (searchResult) {
+        const flightResult = JSON.parse(searchResult.searchResults);
+        console.log(flightResult);
+        const flightDetails = await this.httpService.axiosRef.get(
+          `https://sky-scanner3.p.rapidapi.com/flights/detail`,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'X-RapidAPI-Key': process.env.RapidAPI_KEY,
+              'X-RapidAPI-Host': process.env.RapidAPI_HOST,
+            },
+            params: {
+              token: flightResult.token,
+              itineraryId: flightResult.id.trim(),
+            },
+          },
+        );
+        if (flightDetails) {
+          console.log(flightDetails.data);
+          return {
+            firstName: session.firstName,
+            lastName: session.lastName,
+            email: session.email,
+            summary: flightResult.summary,
+            airline: flightResult.airline,
+            price: flightResult.amount,
+            flightDeeplinks: `${flightDetails.data.data.itinerary.pricingOptions.map(
+              (agent) => {
+                return {
+                  agentName: agent.name,
+                  url: agent.url,
+                  price: agent.price,
+                };
+              },
+            )}`,
+          };
+        }
+        return;
       }
       return;
     } catch (error) {
