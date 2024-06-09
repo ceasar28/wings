@@ -4,6 +4,7 @@ import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { encodeURL, findReference, validateTransfer } from '@solana/pay';
 import BigNumber from 'bignumber.js';
 import { DatabaseService } from 'src/database/database.service';
+import { airportsData } from './airports';
 
 @Injectable()
 export class FlightSearchService {
@@ -35,16 +36,17 @@ export class FlightSearchService {
   // get airports
   searchAirport = async (query: string) => {
     try {
-      const airports = await this.httpService.axiosRef.get(
-        `https://sky-scanner3.p.rapidapi.com/flights/airports`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'X-RapidAPI-Key': process.env.RapidAPI_KEY,
-            'X-RapidAPI-Host': process.env.RapidAPI_HOST,
-          },
-        },
-      );
+      // const airports = await this.httpService.axiosRef.get(
+      //   `https://sky-scanner3.p.rapidapi.com/flights/airports`,
+      //   {
+      //     headers: {
+      //       'Content-Type': 'application/json',
+      //       'X-RapidAPI-Key': process.env.RapidAPI_KEY,
+      //       'X-RapidAPI-Host': process.env.RapidAPI_HOST,
+      //     },
+      //   },
+      // );
+      const airports = await airportsData();
       if (airports) {
         // function to filter search
         function searchByLocation(data, location) {
@@ -52,10 +54,7 @@ export class FlightSearchService {
         }
 
         // Example Usage
-        const matchedCityAirports = searchByLocation(
-          airports.data['data'],
-          query,
-        );
+        const matchedCityAirports = searchByLocation(airports.data, query);
         console.log(matchedCityAirports);
         return matchedCityAirports;
       }
@@ -272,41 +271,58 @@ export class FlightSearchService {
   generateSolanaPayUrl = async (payload: any) => {
     console.log(payload);
     try {
-      const myWallet = new PublicKey(
-        '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
+      // fetch Solana-usdc pric
+      const rate = await this.httpService.axiosRef.get(
+        `https://price.jup.ag/v6/price`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          params: {
+            ids: 'SOL',
+          },
+        },
       );
-      const recipient = new PublicKey(myWallet);
-      const amount = new BigNumber(payload.amount); // 0.0001 SOL
-      const label = 'Wings Flight Bot';
-      const memo = 'Flight Booking';
-      const reference = new Keypair().publicKey;
-      const message = payload.message;
+      if (rate.data) {
+        console.log(rate.data);
+        const myWallet = new PublicKey(
+          '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
+        );
+        const price = payload.amount / rate.data.data['SOL'].price;
+        const recipient = new PublicKey(myWallet);
+        const amount = new BigNumber(price.toFixed(9));
+        const label = 'Wings Flight Bot';
+        const memo = 'Flight Booking';
+        const reference = new Keypair().publicKey;
+        const message = payload.message;
 
-      const url: URL = encodeURL({
-        recipient,
-        amount,
-        reference,
-        label,
-        message,
-        memo,
-      });
-      if (url) {
-        const ref = reference.toBase58();
-        // update user booking session
-        await this.databaseService.bookingSession.updateMany({
-          where: {
-            chat_id: payload.chatId,
-          },
-          data: {
-            ref,
-            amount: amount.toString(),
-            recipient: recipient.toBase58(),
-            message,
-            deeplink: url.toString(),
-          },
+        const url: URL = encodeURL({
+          recipient,
+          amount,
+          reference,
+          label,
+          message,
+          memo,
         });
-        return { url: url.toString(), ref };
+        if (url) {
+          const ref = reference.toBase58();
+          // update user booking session
+          await this.databaseService.bookingSession.updateMany({
+            where: {
+              chat_id: payload.chatId,
+            },
+            data: {
+              ref,
+              amount: amount.toString(),
+              recipient: recipient.toBase58(),
+              message,
+              deeplink: url.toString(),
+            },
+          });
+          return { url: url.toString(), ref };
+        }
       }
+
       return;
     } catch (error) {
       console.error('this is error :', error);
@@ -316,44 +332,61 @@ export class FlightSearchService {
   generateBonkPayUrl = async (payload: any) => {
     console.log(payload);
     try {
-      const myWallet = new PublicKey(
-        '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
-      );
-      const recipient = new PublicKey(myWallet);
-      const amount = new BigNumber(payload.amount); // 0.0001 SOL
-      const label = 'Wings Flight Bot';
-      const memo = 'Flight Booking';
-      const reference = new Keypair().publicKey;
-      const message = payload.message;
-      const bonkMintAddr = new PublicKey(
-        'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      // fetch Bonk-usdc pric
+      const rate = await this.httpService.axiosRef.get(
+        `https://price.jup.ag/v6/price`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          params: {
+            ids: 'Bonk',
+          },
+        },
       );
 
-      const url: URL = encodeURL({
-        recipient,
-        amount,
-        splToken: bonkMintAddr,
-        reference,
-        label,
-        message,
-        memo,
-      });
-      if (url) {
-        const ref = reference.toBase58();
-        // update user booking session
-        await this.databaseService.bookingSession.updateMany({
-          where: {
-            chat_id: payload.chatId,
-          },
-          data: {
-            ref,
-            amount: amount.toString(),
-            recipient: recipient.toBase58(),
-            message,
-            deeplink: url.toString(),
-          },
+      if (rate.data) {
+        const myWallet = new PublicKey(
+          '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
+        );
+        const price = payload.amount / rate.data.data['Bonk'].price;
+
+        const recipient = new PublicKey(myWallet);
+        const amount = new BigNumber(price.toFixed(9));
+        const label = 'Wings Flight Bot';
+        const memo = 'Flight Booking';
+        const reference = new Keypair().publicKey;
+        const message = payload.message;
+        const bonkMintAddr = new PublicKey(
+          'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+        );
+
+        const url: URL = encodeURL({
+          recipient,
+          amount,
+          splToken: bonkMintAddr,
+          reference,
+          label,
+          message,
+          memo,
         });
-        return { url: url.toString(), ref };
+        if (url) {
+          const ref = reference.toBase58();
+          // update user booking session
+          await this.databaseService.bookingSession.updateMany({
+            where: {
+              chat_id: payload.chatId,
+            },
+            data: {
+              ref,
+              amount: amount.toString(),
+              recipient: recipient.toBase58(),
+              message,
+              deeplink: url.toString(),
+            },
+          });
+          return { url: url.toString(), ref };
+        }
       }
       return;
     } catch (error) {
@@ -396,7 +429,7 @@ export class FlightSearchService {
         found.signature,
         {
           recipient: new PublicKey(bookingSessions.recipient),
-          amount: BigNumber(bookingSessions.amount),
+          amount: new BigNumber(bookingSessions.amount),
           splToken: undefined,
           reference: new PublicKey(bookingSessions.ref),
           //memo
