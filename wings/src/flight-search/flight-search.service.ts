@@ -272,23 +272,27 @@ export class FlightSearchService {
           },
         );
         if (flightDetails) {
-          console.log(flightDetails.data);
+          const deepLInk = flightDetails.data.data.itinerary.pricingOptions.map(
+            (agent) => {
+              if (agent.agents[0].price == flightResult.amount) {
+                return {
+                  agentName: agent.agents[0].name,
+                  url: agent.agents[0].url,
+                  price: agent.agents[0].price,
+                };
+              }
+              console.log(agent);
+            },
+          );
+
           return {
             firstName: session.firstName,
-            lastName: session.lastName,
+            lastName: session.LastName,
             email: session.email,
             summary: flightResult.summary,
             airline: flightResult.airline,
             price: flightResult.amount,
-            flightDeeplinks: `${flightDetails.data.data.itinerary.pricingOptions.map(
-              (agent) => {
-                return {
-                  agentName: agent.name,
-                  url: agent.url,
-                  price: agent.price,
-                };
-              },
-            )}`,
+            flightDeeplinks: deepLInk,
           };
         }
         return;
@@ -362,6 +366,7 @@ export class FlightSearchService {
           '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
         );
         const price = payload.amount / rate.data.data['SOL'].price;
+        console.log(new BigNumber(price.toFixed(9)));
         const recipient = new PublicKey(myWallet);
         const amount = new BigNumber(price.toFixed(9));
         const label = 'Wings Flight Bot';

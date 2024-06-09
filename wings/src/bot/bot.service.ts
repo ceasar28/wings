@@ -1597,7 +1597,7 @@ export class BotService {
                       {
                         text: 'Payment Verified ✅',
                         callback_data: JSON.stringify({
-                          command: '/newSearch',
+                          command: '/viewDetails',
                           language: 'english',
                         }),
                       },
@@ -1630,13 +1630,16 @@ export class BotService {
                 await this.flightSearchService.searchFlightDetails(session);
 
               if (flightDetails) {
+                console.log(Array.from(flightDetails.flightDeeplinks));
                 await this.wingBot.sendMessage(
                   session.chat_id.toString(),
-                  `Status: Paid\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nPrice: ${flightDetails.price}\n\nDeeplinks : ${Array.from(
-                    flightDetails.flightDeeplinks,
-                  ).map((link: any) => {
-                    return `Agent name: ${link.agentName}\nlink: ${link.url}\nPrice: ${link.price}`;
-                  })}`,
+                  `Status: Paid\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nPrice: ${flightDetails.price}`,
+                );
+                // send links
+
+                return await this.wingBot.sendMessage(
+                  session.chat_id.toString(),
+                  `Agent name: ${flightDetails.flightDeeplinks[0].agentName}\nlink: ${flightDetails.flightDeeplinks[0].url}\nPrice: ${flightDetails.flightDeeplinks[0].price}`,
                 );
               }
             }
@@ -1648,6 +1651,14 @@ export class BotService {
             console.log(error);
             return;
           }
+
+        // case '/viewDetails':
+        //   await sessionExist
+        //   try {
+        //     return await this.flightSearchService.searchFlightDetails()
+        //   } catch (error) {
+
+        //   }
 
         default:
           console.log('default');
