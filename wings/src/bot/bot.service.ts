@@ -1745,9 +1745,16 @@ export class BotService {
         inline_keyboard: welcomeMessage.markup,
         force_reply: true,
       };
-      await this.wingBot.sendMessage(chat_id, welcomeMessage.message, {
-        reply_markup: markup,
-      });
+
+      await this.wingBot.sendPhoto(
+        chat_id,
+        'https://i.ibb.co/qDFWWq3/wings-high-resolution-logo.png',
+        {
+          parse_mode: 'HTML',
+          caption: welcomeMessage.message,
+          reply_markup: markup,
+        },
+      );
     } catch (error) {
       console.log(error);
     }
