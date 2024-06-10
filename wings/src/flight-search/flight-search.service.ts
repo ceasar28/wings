@@ -272,18 +272,17 @@ export class FlightSearchService {
           },
         );
         if (flightDetails) {
-          const deepLInk = flightDetails.data.data.itinerary.pricingOptions.map(
-            (agent) => {
-              if (agent.agents[0].price == flightResult.amount) {
-                return {
-                  agentName: agent.agents[0].name,
-                  url: agent.agents[0].url,
-                  price: agent.agents[0].price,
-                };
-              }
-              console.log(agent);
-            },
-          );
+          const deepLink = [];
+          flightDetails.data.data.itinerary.pricingOptions.map((agent) => {
+            if (agent.agents[0].price == flightResult.amount) {
+              deepLink.push({
+                agentName: agent.agents[0].name,
+                url: agent.agents[0].url,
+                price: agent.agents[0].price,
+              });
+            }
+            return;
+          });
 
           return {
             firstName: session.firstName,
@@ -292,7 +291,7 @@ export class FlightSearchService {
             summary: flightResult.summary,
             airline: flightResult.airline,
             price: flightResult.amount,
-            flightDeeplinks: deepLInk,
+            flightDeeplinks: deepLink,
           };
         }
         return;

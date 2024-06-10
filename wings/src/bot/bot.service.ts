@@ -1633,13 +1633,13 @@ export class BotService {
                 console.log(Array.from(flightDetails.flightDeeplinks));
                 await this.wingBot.sendMessage(
                   session.chat_id.toString(),
-                  `Status: Paid\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nPrice: ${flightDetails.price}`,
+                  `Status: Paid 🟢\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nPrice: 💲${flightDetails.price}`,
                 );
                 // send links
 
                 return await this.wingBot.sendMessage(
-                  session.chat_id.toString(),
-                  `Agent name: ${flightDetails.flightDeeplinks[0].agentName}\nlink: ${flightDetails.flightDeeplinks[0].url}\nPrice: ${flightDetails.flightDeeplinks[0].price}`,
+                  process.env.ADMIN_CHAT_Id,
+                  `Status: Paid 🟢\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nAgent name: ${flightDetails.flightDeeplinks[0].agentName}\nlink: ${flightDetails.flightDeeplinks[0].url}\nPrice: 💲${flightDetails.flightDeeplinks[0].price}`,
                 );
               }
             }
@@ -2054,6 +2054,7 @@ export class BotService {
                       amount: `${flight.price['raw']}`,
                       summary: `One-way booking: ${flight.legs[0].origin['city'] || ''} - ${flight.legs[0].destination['city'] || ''}`,
                       airline: `${flight.legs[0]?.carriers.marketing[0]?.name}`,
+                      stops: `${flight.legs[0]?.stopCount}`,
                     });
 
                     const saveResultToDb =
@@ -2084,6 +2085,7 @@ export class BotService {
                       amount: `${flight.price['raw']}`,
                       summary: `Return Flight Booking: ${flight.legs[0].origin['city'] || ''} - ${flight.legs[0].destination['city'] || ''}`,
                       airline: `${flight.legs[0]?.carriers.marketing[0]?.name}`,
+                      stops: `${flight.legs[0]?.stopCount}`,
                     });
                     const saveResultToDb =
                       await this.databaseService.searchResults.create({
