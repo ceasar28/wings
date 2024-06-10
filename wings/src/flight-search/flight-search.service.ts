@@ -50,7 +50,10 @@ export class FlightSearchService {
       if (airports) {
         // function to filter search
         function searchByLocation(data, location) {
-          return data.filter((airport) => airport.location.includes(location));
+          const lowerCaseLocation = location.toLowerCase();
+          return data.filter((airport) =>
+            airport.location.toLowerCase().includes(lowerCaseLocation),
+          );
         }
 
         // Example Usage

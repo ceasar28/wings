@@ -1315,6 +1315,23 @@ export class BotService {
                 currency: 'USD',
               });
             if (availableFlights) {
+              if (availableFlights.completeFlights.length === 0) {
+                const retry =
+                  await this.flightSearchService.searchAvailableOneWayFlight({
+                    from: sessionOneWay.departureCityCode,
+                    to: sessionOneWay.destinationCityCode,
+                    date_from: sessionOneWay.departureDate,
+                    currency: 'USD',
+                  });
+                if (retry) {
+                  return await this.displayFlights(
+                    query.message.chat.id,
+                    sessionOneWay.language,
+                    'oneWayMarkup',
+                    retry,
+                  );
+                }
+              }
               console.log(availableFlights);
               return await this.displayFlights(
                 query.message.chat.id,
@@ -1340,6 +1357,25 @@ export class BotService {
                 currency: 'USD',
               });
             if (availableFlights) {
+              if (availableFlights['completeFlights'].length === 0) {
+                // to retry incase the first serach was empty
+                const retry =
+                  await this.flightSearchService.searchAvailableReturnFlight({
+                    from: sessionReturn.departureCityCode,
+                    to: sessionReturn.destinationCityCode,
+                    date_from: sessionReturn.departureDate,
+                    date_to: sessionReturn.returnDate,
+                    currency: 'USD',
+                  });
+                if (retry) {
+                  return await this.displayFlights(
+                    query.message.chat.id,
+                    sessionReturn.language,
+                    'returnMarkup',
+                    retry,
+                  );
+                }
+              }
               return await this.displayFlights(
                 query.message.chat.id,
                 sessionReturn.language,
@@ -1362,6 +1398,20 @@ export class BotService {
                 JSON.parse(sessionMultiCity.multicitySearchData),
               );
             if (availableFlights) {
+              if (availableFlights.completeFlights.length == 0) {
+                const retry =
+                  await this.flightSearchService.searchAvailableMulticityFlight(
+                    JSON.parse(sessionMultiCity.multicitySearchData),
+                  );
+                if (retry) {
+                  return await this.displayFlights(
+                    query.message.chat.id,
+                    sessionMultiCity.language,
+                    'multiCityMarkup',
+                    retry,
+                  );
+                }
+              }
               console.log(availableFlights);
               return await this.displayFlights(
                 query.message.chat.id,
