@@ -13,6 +13,7 @@ import {
 import { DatabaseService } from 'src/database/database.service';
 import { Prisma } from '@prisma/client';
 import { FlightSearchService } from 'src/flight-search/flight-search.service';
+import * as QRCode from 'qrcode';
 
 @Injectable()
 export class BotService {
@@ -1510,7 +1511,16 @@ export class BotService {
                 await this.flightSearchService.generateSolanaPayUrl(payload);
               if (createOrder) {
                 console.log(createOrder.url);
-                const webApp = 'https://wings-kappa.vercel.app/';
+                const qrCode = await QRCode.toBuffer(createOrder.url);
+                if (qrCode) console.log(qrCode);
+                {
+                  return await this.wingBot.sendAnimation(
+                    query.message.chat.id,
+                    qrCode,
+                    {},
+                  );
+                }
+
                 return this.wingBot.sendMessage(
                   query.message.chat.id,
                   `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
@@ -1531,10 +1541,6 @@ export class BotService {
                           },
                         ],
                         [
-                          {
-                            text: 'Scan to pay',
-                            web_app: { url: `${webApp}` },
-                          },
                           {
                             text: '❌ Cancel',
                             callback_data: JSON.stringify({
