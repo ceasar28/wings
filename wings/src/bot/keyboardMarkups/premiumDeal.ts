@@ -2,8 +2,11 @@ export const premiumDeal_en = {
   premiumDealMarkup: [
     [
       {
-        text: '💳 Join Premium - $12/year',
-        url: 'https://buy.paddle.com/checkout/59647791-chrecee76455663-567059c5ed',
+        text: '💳 Join Premium - $10/year',
+        callback_data: JSON.stringify({
+          command: '/premiumPay',
+          language: 'english',
+        }),
       },
     ],
     [
@@ -11,6 +14,13 @@ export const premiumDeal_en = {
         text: '☰ Menu',
         callback_data: JSON.stringify({
           command: '/menu',
+          language: 'english',
+        }),
+      },
+      {
+        text: '❌ Close',
+        callback_data: JSON.stringify({
+          command: '/close',
           language: 'english',
         }),
       },

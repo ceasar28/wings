@@ -1087,6 +1087,41 @@ export class BotService {
           await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           return await this.sendAllCountries(query.message.chat.id);
 
+        case '/premiumPay':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          await this.wingBot.sendAnimation(
+            query.message.chat.id,
+            'https://i.ibb.co/7QZ4J3Y/giphy.gif',
+          );
+          return await this.wingBot.sendAnimation(
+            query.message.chat.id,
+            'https://media.giphy.com/media/k85c6FpnFa4bNp11XQ/giphy.gif',
+            {
+              parse_mode: 'HTML',
+              caption: 'We are cooking!',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    {
+                      text: '☰ Menu',
+                      callback_data: JSON.stringify({
+                        command: '/menu',
+                        language: 'english',
+                      }),
+                    },
+                    {
+                      text: '❌ Close',
+                      callback_data: JSON.stringify({
+                        command: '/close',
+                        language: 'english',
+                      }),
+                    },
+                  ],
+                ],
+              },
+            },
+          );
+
         // search flight
         case '/oneway':
           await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
@@ -1854,7 +1889,8 @@ export class BotService {
       };
       return await this.wingBot.sendMessage(
         chatId,
-        `Upgrade to Wings-booking Premium and enjoy access to all the benefits at an incredibly affordable price.\n\nToday Only: 90% OFF! $120 $12/year\n\n🛩 Choose a specific flight to track.\n\n⚡️ Enjoy more frequent updates on ticket prices.\n\n🤘 Be the first to receive flight alerts.\n\n🎫 Use the Flight Deals feature to find flights across a wide range of dates and track prices for all flights at once.\n\n💬 Receive premium support.\n\n💸 Support an independent business that respects your data privacy.\n\n💳 30-day money-back guarantee if you're not satisfied.`,
+        `Upgrade to Wings-booking Premium and enjoy access to all the benefits at an incredibly affordable price.\n\n🛩 Choose a flight to track specifically.\n\n⚡️
+Receive more frequent updates on ticket prices.\n\n🤘 Be the first to receive flight alerts.\n\n🎫 Use the Flight Deals feature to find flights across a wide range of dates and track prices for all flights at once.\n\n💬 Receive premium support.`,
         { reply_markup: premiumMarkup },
       );
     } catch (error) {

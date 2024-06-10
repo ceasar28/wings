@@ -2,14 +2,14 @@ export const menuMarkup_en = {
   markup: [
     [
       {
-        text: '🔎 New Search',
+        text: '🔎 Search Flights',
         callback_data: JSON.stringify({
           command: '/newSearch',
           language: 'english',
         }),
       },
       {
-        text: '🎫 Flight Deals',
+        text: '🎫 Premium Deals',
         callback_data: JSON.stringify({
           command: '/premiumDeals',
           language: 'english',
