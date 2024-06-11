@@ -8,8 +8,7 @@ import { airportsData } from './airports';
 
 @Injectable()
 export class FlightSearchService {
-  private quicknodeEndpoint =
-    'https://nd-818-433-873.p2pify.com/9853f3a0477128226a6bd8e0ffb2ebfb'; // Replace with your QuickNode
+  private connection = 'https://api.mainnet-beta.solana.com';
 
   // INJECTING HTTPservice
   constructor(
@@ -353,7 +352,7 @@ export class FlightSearchService {
             'Content-Type': 'application/json',
           },
           params: {
-            ids: 'Bork',
+            ids: 'BORK',
           },
         },
       );
@@ -364,8 +363,8 @@ export class FlightSearchService {
         console.log(serviceFee);
         const myWallet = new PublicKey(process.env.ADMIN_WALLET);
         const price =
-          (Number(payload.amount) + serviceFee) / rate.data.data['Bork'].price;
-        console.log(rate.data.data['Bork'].price);
+          (Number(payload.amount) + serviceFee) / rate.data.data['BORK'].price;
+        console.log(rate.data.data['BORK'].price);
         const recipient = new PublicKey(myWallet);
         const amount = new BigNumber(price.toFixed(9));
         const label = 'Wings Flight Bot';
@@ -425,7 +424,7 @@ export class FlightSearchService {
         };
       }
       // 2 - Establish a Connection to the Solana Cluster
-      const connection = new Connection(this.quicknodeEndpoint, 'confirmed');
+      const connection = new Connection(this.connection, 'confirmed');
       console.log('recipient', bookingSessions.recipient);
       console.log('amount', bookingSessions.amount);
       console.log('reference', bookingSessions.ref);
