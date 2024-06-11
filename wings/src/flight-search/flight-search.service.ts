@@ -16,36 +16,10 @@ export class FlightSearchService {
     private readonly httpService: HttpService,
     private readonly databaseService: DatabaseService,
   ) {}
-  //get all Carries
-  // getAllCarrier = async (id: string) => {
-  //   const allCarriers = await this.httpService.axiosRef.get(
-  //     'https://tequila-api.kiwi.com/carriers',
-  //   );
-  //   let carrier: object;
-  //   if (allCarriers) {
-  //     allCarriers.data.map((data) => {
-  //       if (data.id === id) {
-  //         return (carrier = data);
-  //       }
-  //     });
-  //   }
-
-  //   return carrier;
-  // };
 
   // get airports
   searchAirport = async (query: string) => {
     try {
-      // const airports = await this.httpService.axiosRef.get(
-      //   `https://sky-scanner3.p.rapidapi.com/flights/airports`,
-      //   {
-      //     headers: {
-      //       'Content-Type': 'application/json',
-      //       'X-RapidAPI-Key': process.env.RapidAPI_KEY,
-      //       'X-RapidAPI-Host': process.env.RapidAPI_HOST,
-      //     },
-      //   },
-      // );
       const airports = await airportsData();
       if (airports) {
         // function to filter search
@@ -79,7 +53,7 @@ export class FlightSearchService {
     }
     try {
       const availableFlights = await this.httpService.axiosRef.get(
-        `https://sky-scanner3.p.rapidapi.com/flights/search-one-way`,
+        process.env.ONEWAY_URL,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -96,7 +70,7 @@ export class FlightSearchService {
       if (availableFlights) {
         if (availableFlights.data['data'].context['status'] === 'incomplete') {
           const completeFlights = await this.httpService.axiosRef.get(
-            `https://sky-scanner3.p.rapidapi.com/flights/search-incomplete`,
+            process.env.COMPLETE_FLIGHT_URL,
             {
               headers: {
                 'Content-Type': 'application/json',
@@ -140,7 +114,7 @@ export class FlightSearchService {
     }
     try {
       const availableFlights = await this.httpService.axiosRef.get(
-        `https://sky-scanner3.p.rapidapi.com/flights/search-roundtrip`,
+        process.env.RETURN_URL,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -158,7 +132,7 @@ export class FlightSearchService {
       if (availableFlights) {
         if (availableFlights.data['data'].context['status'] === 'incomplete') {
           const completeFlights = await this.httpService.axiosRef.get(
-            `https://sky-scanner3.p.rapidapi.com/flights/search-incomplete`,
+            process.env.COMPLETE_FLIGHT_URL,
             {
               headers: {
                 'Content-Type': 'application/json',
@@ -206,7 +180,7 @@ export class FlightSearchService {
     };
     try {
       const availableFlights = await this.httpService.axiosRef.post(
-        `https://sky-scanner3.p.rapidapi.com/flights/search-multi-city`,
+        process.env.MULTICITY_URL,
         data,
         {
           headers: {
@@ -219,7 +193,7 @@ export class FlightSearchService {
       if (availableFlights) {
         if (availableFlights.data['data'].context['status'] === 'incomplete') {
           const completeFlights = await this.httpService.axiosRef.get(
-            `https://sky-scanner3.p.rapidapi.com/flights/search-incomplete`,
+            process.env.COMPLETE_FLIGHT_URL,
             {
               headers: {
                 'Content-Type': 'application/json',
@@ -261,7 +235,7 @@ export class FlightSearchService {
         const flightResult = JSON.parse(searchResult.searchResults);
         console.log(flightResult);
         const flightDetails = await this.httpService.axiosRef.get(
-          `https://sky-scanner3.p.rapidapi.com/flights/detail`,
+          `${process.env.FLIGHT_DETAIL_URL}`,
           {
             headers: {
               'Content-Type': 'application/json',
@@ -305,48 +279,7 @@ export class FlightSearchService {
     }
   };
 
-  saveBookingDetails = async (query: any) => {
-    console.log(query);
-  };
-
-  // Payment Coingate
-  generatePaymentUrl = async (payload: any) => {
-    console.log('This is payload: ', payload);
-    try {
-      const payment = await this.httpService.axiosRef.post(
-        `https://api-sandbox.coingate.com/v2/orders`,
-        {},
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${process.env.COINGATE_TOKEN}`,
-          },
-          params: {
-            order_id: payload.order_id,
-            price_amount: payload.price,
-            price_currency: 'USD',
-            receive_currency: 'USD',
-            title: payload.title,
-            description: 'CheapFlight Bot booking',
-            callback_url:
-              'https://flightbookingairdropbot-3fu3.onrender.com/bot',
-            cancel_url: 'https://t.me/CheapflightCrypto_bot',
-            success_url: 'https://t.me/CheapflightCrypto_bot',
-            purchaser_email: payload.email,
-          },
-        },
-      );
-      if (payment) {
-        console.log(payment.data);
-        return payment.data;
-      }
-      return;
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
-  // solana payment
+  // solana payment URL
   generateSolanaPayUrl = async (payload: any) => {
     console.log(payload);
     try {
@@ -363,11 +296,11 @@ export class FlightSearchService {
         },
       );
       if (rate.data) {
-        console.log(rate.data);
-        const myWallet = new PublicKey(
-          '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
-        );
-        const price = payload.amount / rate.data.data['SOL'].price;
+        const serviceFee = Number(process.env.SERVICE_FEE); // our charge
+        console.log(serviceFee);
+        const myWallet = new PublicKey(process.env.ADMIN_WALLET);
+        const price =
+          (Number(payload.amount) + serviceFee) / rate.data.data['SOL'].price;
         console.log(new BigNumber(price.toFixed(9)));
         const recipient = new PublicKey(myWallet);
         const amount = new BigNumber(price.toFixed(9));
@@ -420,17 +353,19 @@ export class FlightSearchService {
             'Content-Type': 'application/json',
           },
           params: {
-            ids: 'Bonk',
+            ids: 'Bork',
           },
         },
       );
 
       if (rate.data) {
-        const myWallet = new PublicKey(
-          '7eBmtW8CG1zJ6mEYbTpbLRtjD1BLHdQdU5Jc8Uip42eE',
-        );
-        const price = payload.amount / rate.data.data['Bonk'].price;
-
+        console.log(rate.data);
+        const serviceFee = Number(process.env.SERVICE_FEE); // our charge
+        console.log(serviceFee);
+        const myWallet = new PublicKey(process.env.ADMIN_WALLET);
+        const price =
+          (Number(payload.amount) + serviceFee) / rate.data.data['Bork'].price;
+        console.log(rate.data.data['Bork'].price);
         const recipient = new PublicKey(myWallet);
         const amount = new BigNumber(price.toFixed(9));
         const label = 'Wings Flight Bot';
@@ -438,7 +373,7 @@ export class FlightSearchService {
         const reference = new Keypair().publicKey;
         const message = payload.message;
         const bonkMintAddr = new PublicKey(
-          'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+          '4jZXkSNgTQKCDb36ECZ6a2aNzcUniGcDeXgTdtM2HxAX',
         );
 
         const url: URL = encodeURL({

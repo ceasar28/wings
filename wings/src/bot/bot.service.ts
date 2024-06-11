@@ -1549,50 +1549,44 @@ export class BotService {
                 const qrCode = await QRCode.toBuffer(createOrder.url);
                 if (qrCode) console.log(qrCode);
                 {
-                  return await this.wingBot.sendAnimation(
+                  return await this.wingBot.sendPhoto(
                     query.message.chat.id,
                     qrCode,
-                    {},
+                    {
+                      parse_mode: 'HTML',
+                      caption: `Scan the code above ☝️ to pay, or click the deeplink button to pay using any available solana mobile wallet\n\nPassenger Details :\n\Passenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
+                      reply_markup: {
+                        inline_keyboard: [
+                          [
+                            {
+                              text: 'deeplink',
+                              url: `${process.env.SERVER_URL}${bookingDetail.id}`,
+                            },
+                            {
+                              text: '✅ Verify',
+                              callback_data: JSON.stringify({
+                                command: '/verifyPayment',
+                                bookingDetailsDbId: Number(bookingDetail.id),
+                              }),
+                            },
+                          ],
+                          [
+                            {
+                              text: '❌ Cancel',
+                              callback_data: JSON.stringify({
+                                command: '/closedelete',
+                                bookingDetailsDbId: Number(
+                                  bookingDetail.searchResultId,
+                                ),
+                              }),
+                            },
+                          ],
+                        ],
+                      },
+                    },
                   );
                 }
-
-                return this.wingBot.sendMessage(
-                  query.message.chat.id,
-                  `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
-                  {
-                    reply_markup: {
-                      inline_keyboard: [
-                        [
-                          {
-                            text: 'deeplink',
-                            url: `https://dc3v8d3l-3000.eun1.devtunnels.ms/flight-search/${bookingDetail.id}`,
-                          },
-                          {
-                            text: '✅ Verify',
-                            callback_data: JSON.stringify({
-                              command: '/verifyPayment',
-                              bookingDetailsDbId: Number(bookingDetail.id),
-                            }),
-                          },
-                        ],
-                        [
-                          {
-                            text: '❌ Cancel',
-                            callback_data: JSON.stringify({
-                              command: '/closedelete',
-                              bookingDetailsDbId: Number(
-                                bookingDetail.searchResultId,
-                              ),
-                            }),
-                          },
-                        ],
-                      ],
-                    },
-                  },
-                );
               }
-              // make the http call to fetch payment url
-              // users details, send it to the user
             }
           }
           return;
@@ -1617,48 +1611,47 @@ export class BotService {
                 await this.flightSearchService.generateBonkPayUrl(payload);
               if (createOrder) {
                 console.log(createOrder.url);
-                const webApp = 'https://wings-kappa.vercel.app/';
-                return this.wingBot.sendMessage(
-                  query.message.chat.id,
-                  `Passenger Details :\n\nPassenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
-                  {
-                    reply_markup: {
-                      inline_keyboard: [
-                        [
-                          {
-                            text: 'deeplink',
-                            url: `https://dc3v8d3l-3000.eun1.devtunnels.ms/flight-search/${bookingDetail.id}`,
-                          },
-                          {
-                            text: '✅ Verify',
-                            callback_data: JSON.stringify({
-                              command: '/verifyPayment',
-                              bookingDetailsDbId: Number(bookingDetail.id),
-                            }),
-                          },
+                const qrCode = await QRCode.toBuffer(createOrder.url);
+                if (qrCode) console.log(qrCode);
+                {
+                  return await this.wingBot.sendPhoto(
+                    query.message.chat.id,
+                    qrCode,
+                    {
+                      parse_mode: 'HTML',
+                      caption: `Scan the code above ☝️ to pay, or click the deeplink button to pay using any available solana mobile wallet\n\nPassenger Details :\n\Passenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
+                      reply_markup: {
+                        inline_keyboard: [
+                          [
+                            {
+                              text: 'deeplink',
+                              url: `${process.env.SERVER_URL}${bookingDetail.id}`,
+                            },
+                            {
+                              text: '✅ Verify',
+                              callback_data: JSON.stringify({
+                                command: '/verifyPayment',
+                                bookingDetailsDbId: Number(bookingDetail.id),
+                              }),
+                            },
+                          ],
+                          [
+                            {
+                              text: '❌ Cancel',
+                              callback_data: JSON.stringify({
+                                command: '/closedelete',
+                                bookingDetailsDbId: Number(
+                                  bookingDetail.searchResultId,
+                                ),
+                              }),
+                            },
+                          ],
                         ],
-                        [
-                          {
-                            text: 'Scan to pay',
-                            web_app: { url: `${webApp}` },
-                          },
-                          {
-                            text: '❌ Cancel',
-                            callback_data: JSON.stringify({
-                              command: '/closedelete',
-                              bookingDetailsDbId: Number(
-                                bookingDetail.searchResultId,
-                              ),
-                            }),
-                          },
-                        ],
-                      ],
+                      },
                     },
-                  },
-                );
+                  );
+                }
               }
-              // make the http call to fetch payment url
-              // users details, send it to the user
             }
           }
           return;
