@@ -4,6 +4,8 @@
 
 This is a Telegram bot that allows users to book flights using Bonk crypto as payment. The bot utilizes Solana Pay as the payment gateway, ensuring fast and secure transactions.
 
+a completed transaction hash on the bot: https://solscan.io/tx/436JMZ2iGyhkY9GTaMCDSCYBK2qpnUfMypL3CQFWykGYC7jA8Cd47ouBExZ9tWiYZdqFecHw3MRuh8d63uM6EK3o
+
 ## Features
 
 - Search for flights based on departure and arrival cities, dates, and other preferences.
