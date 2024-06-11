@@ -352,7 +352,7 @@ export class FlightSearchService {
             'Content-Type': 'application/json',
           },
           params: {
-            ids: 'BORK',
+            ids: 'Bonk',
           },
         },
       );
@@ -363,8 +363,7 @@ export class FlightSearchService {
         console.log(serviceFee);
         const myWallet = new PublicKey(process.env.ADMIN_WALLET);
         const price =
-          (Number(payload.amount) + serviceFee) / rate.data.data['BORK'].price;
-        console.log(rate.data.data['BORK'].price);
+          (Number(payload.amount) + serviceFee) / rate.data.data['Bonk'].price;
         const recipient = new PublicKey(myWallet);
         const amount = new BigNumber(price.toFixed(9));
         const label = 'Wings Flight Bot';
@@ -372,7 +371,7 @@ export class FlightSearchService {
         const reference = new Keypair().publicKey;
         const message = payload.message;
         const bonkMintAddr = new PublicKey(
-          '4jZXkSNgTQKCDb36ECZ6a2aNzcUniGcDeXgTdtM2HxAX',
+          'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
         );
 
         const url: URL = encodeURL({
