@@ -1,4 +1,4 @@
-# Flight Booking Bot
+# Wings
 
 ## Overview
 
