@@ -8,8 +8,7 @@ import { airportsData } from './airports';
 
 @Injectable()
 export class FlightSearchService {
-  private connection =
-    'https://mainnet.helius-rpc.com/?api-key=a2b67de4-de35-4629-ac8c-20c919c6e7d5';
+  private connection = 'https://api.mainnet-beta.solana.com';
 
   // INJECTING HTTPservice
   constructor(
