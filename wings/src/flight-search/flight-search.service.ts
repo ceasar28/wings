@@ -435,7 +435,9 @@ export class FlightSearchService {
         connection,
         new PublicKey(bookingSessions.ref),
       );
-      console.log(found.signature);
+      const bonkMintAddr = new PublicKey(
+        'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
+      );
 
       // 4 - Validate the transaction
       const response = await validateTransfer(
@@ -444,7 +446,7 @@ export class FlightSearchService {
         {
           recipient: new PublicKey(bookingSessions.recipient),
           amount: new BigNumber(bookingSessions.amount),
-          splToken: undefined,
+          splToken: bonkMintAddr,
           reference: new PublicKey(bookingSessions.ref),
           //memo
         },
