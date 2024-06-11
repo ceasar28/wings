@@ -365,7 +365,7 @@ export class FlightSearchService {
         const price =
           (Number(payload.amount) + serviceFee) / rate.data.data['Bonk'].price;
         const recipient = new PublicKey(myWallet);
-        const amount = new BigNumber(price.toFixed(9));
+        const amount = new BigNumber(price.toFixed(5));
         const label = 'Wings Flight Bot';
         const memo = 'Flight Booking';
         const reference = new Keypair().publicKey;
@@ -437,14 +437,14 @@ export class FlightSearchService {
       const bonkMintAddr = new PublicKey(
         'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
       );
-
+      const amount = Number(bookingSessions.amount).toFixed(4);
       // 4 - Validate the transaction
       const response = await validateTransfer(
         connection,
         found.signature,
         {
           recipient: new PublicKey(bookingSessions.recipient),
-          amount: new BigNumber(bookingSessions.amount),
+          amount: new BigNumber(amount),
           splToken: bonkMintAddr,
           reference: new PublicKey(bookingSessions.ref),
           //memo

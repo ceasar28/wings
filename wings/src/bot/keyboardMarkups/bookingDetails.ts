@@ -41,13 +41,6 @@ export const bookingDetails_en = (dbId?, first_Name?, last_Name?, email?) => {
             bookingDetailsDbId: Number(dbId),
           }),
         },
-        {
-          text: `Pay with Sol`,
-          callback_data: JSON.stringify({
-            command: '/GeneratePayment',
-            bookingDetailsDbId: Number(dbId),
-          }),
-        },
       ],
       [
         {
