@@ -1311,7 +1311,6 @@ export class BotService {
           );
 
         case '/departureCity':
-          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           return await this.departureCitySelection(query.message.chat.id);
 
         case '/destinationCity':
@@ -1339,6 +1338,7 @@ export class BotService {
           return await this.departureCitySelection(query.message.chat.id);
 
         case '/searchOneWayFlight':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           const sessionOneWay = await this.databaseService.session.findFirst({
             where: { chat_id: query.message.chat.id },
           });
@@ -1380,6 +1380,7 @@ export class BotService {
           return;
 
         case '/searchReturnFlight':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           const sessionReturn = await this.databaseService.session.findFirst({
             where: { chat_id: query.message.chat.id },
           });
@@ -1423,6 +1424,7 @@ export class BotService {
           return;
 
         case '/searchMultiCityFlight':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           const sessionMultiCity = await this.databaseService.session.findFirst(
             {
               where: { chat_id: query.message.chat.id },
@@ -1526,7 +1528,7 @@ export class BotService {
           await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           return await this.bookingDetailsEmailSelection(query.message.chat.id);
 
-        case '/GeneratePayment':
+        case '/GenerateSOLPayment':
           await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           if (bookingDetailsDbId) {
             const flight = await this.databaseService.searchResults.findFirst({
@@ -1565,7 +1567,7 @@ export class BotService {
                             {
                               text: '✅ Verify',
                               callback_data: JSON.stringify({
-                                command: '/verifyPayment',
+                                command: '/verifySOLPayment',
                                 bookingDetailsDbId: Number(bookingDetail.id),
                               }),
                             },
@@ -1630,7 +1632,7 @@ export class BotService {
                             {
                               text: '✅ Verify',
                               callback_data: JSON.stringify({
-                                command: '/verifyPayment',
+                                command: '/verifyBonkPayment',
                                 bookingDetailsDbId: Number(bookingDetail.id),
                               }),
                             },
@@ -1656,7 +1658,72 @@ export class BotService {
           }
           return;
 
-        case '/verifyPayment':
+        case '/GenerateUSDCPayment':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          if (bookingDetailsDbId) {
+            const flight = await this.databaseService.searchResults.findFirst({
+              where: { id: Number(bookingDetailsDbId) },
+            });
+            const bookingDetail =
+              await this.databaseService.bookingSession.findFirst({
+                where: { chat_id: query.message.chat.id },
+              });
+            if (flight && bookingDetail) {
+              const payload = {
+                amount: JSON.parse(flight.searchResults).amount,
+                message: JSON.parse(flight.searchResults).summary,
+                chatId: query.message.chat.id,
+              };
+              const createOrder =
+                await this.flightSearchService.generateUSDCPayUrl(payload);
+              if (createOrder) {
+                console.log(createOrder.url);
+                const qrCode = await QRCode.toBuffer(createOrder.url);
+                if (qrCode) console.log(qrCode);
+                {
+                  return await this.wingBot.sendPhoto(
+                    query.message.chat.id,
+                    qrCode,
+                    {
+                      parse_mode: 'HTML',
+                      caption: `Scan the code above ☝️ to pay, or click the deeplink button to pay using any available solana mobile wallet\n\nPassenger Details :\n\Passenger's Name : ${bookingDetail.firstName} ${bookingDetail.LastName}\nemail: ${bookingDetail.email}`,
+                      reply_markup: {
+                        inline_keyboard: [
+                          [
+                            {
+                              text: 'deeplink',
+                              url: `${process.env.SERVER_URL}${bookingDetail.id}`,
+                            },
+                            {
+                              text: '✅ Verify',
+                              callback_data: JSON.stringify({
+                                command: '/verifyUSDCPayment',
+                                bookingDetailsDbId: Number(bookingDetail.id),
+                              }),
+                            },
+                          ],
+                          [
+                            {
+                              text: '❌ Cancel',
+                              callback_data: JSON.stringify({
+                                command: '/closedelete',
+                                bookingDetailsDbId: Number(
+                                  bookingDetail.searchResultId,
+                                ),
+                              }),
+                            },
+                          ],
+                        ],
+                      },
+                    },
+                  );
+                }
+              }
+            }
+          }
+          return;
+
+        case '/verifySOLPayment':
           await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           try {
             const session = await this.databaseService.bookingSession.findFirst(
@@ -1666,7 +1733,167 @@ export class BotService {
               return;
             }
             // fetch the search Result
-            const verify = await this.flightSearchService.verifyTransaction(
+            const verify = await this.flightSearchService.verifySOLTransaction(
+              session.id,
+            );
+            if (verify) {
+              await this.wingBot.editMessageReplyMarkup(
+                {
+                  inline_keyboard: [
+                    [
+                      // {
+                      //   text: 'deeplink',
+                      //   url: `https://dc3v8d3l-3000.eun1.devtunnels.ms/flight-search/${bookingDetail.id}`,
+                      // },
+                      {
+                        text: 'Payment Verified ✅',
+                        callback_data: JSON.stringify({
+                          command: '/viewDetails',
+                          language: 'english',
+                        }),
+                      },
+                    ],
+                    // [
+                    //   {
+                    //     text: 'Scan to pay',
+                    //     web_app: { url: `${webApp}` },
+                    //   },
+                    //   {
+                    //     text: '❌ Cancel',
+                    //     callback_data: JSON.stringify({
+                    //       command: '/closedelete',
+                    //       bookingDetailsDbId: Number(
+                    //         bookingDetail.searchResultId,
+                    //       ),
+                    //     }),
+                    //   },
+                    // ],
+                  ],
+                },
+
+                {
+                  chat_id: query.message.chat.id,
+                  message_id: query.message.message_id,
+                },
+              );
+              // fetch flight details
+              const flightDetails =
+                await this.flightSearchService.searchFlightDetails(session);
+
+              if (flightDetails) {
+                console.log(Array.from(flightDetails.flightDeeplinks));
+                await this.wingBot.sendMessage(
+                  session.chat_id.toString(),
+                  `Status: Paid 🟢\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nPrice: 💲${flightDetails.price}`,
+                );
+                // send links
+
+                return await this.wingBot.sendMessage(
+                  process.env.ADMIN_CHAT_Id,
+                  `Status: Paid 🟢\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nAgent name: ${flightDetails.flightDeeplinks[0].agentName}\nlink: ${flightDetails.flightDeeplinks[0].url}\nPrice: 💲${flightDetails.flightDeeplinks[0].price}`,
+                );
+              }
+            }
+            return await this.wingBot.sendMessage(
+              session.chat_id.toString(),
+              'Payment Not verified',
+            );
+          } catch (error) {
+            console.log(error);
+            return;
+          }
+
+        case '/verifyUSDCPayment':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          try {
+            const session = await this.databaseService.bookingSession.findFirst(
+              { where: { id: Number(bookingDetailsDbId) } },
+            );
+            if (!session) {
+              return;
+            }
+            // fetch the search Result
+            const verify = await this.flightSearchService.verifyUSDCTransaction(
+              session.id,
+            );
+            if (verify) {
+              await this.wingBot.editMessageReplyMarkup(
+                {
+                  inline_keyboard: [
+                    [
+                      // {
+                      //   text: 'deeplink',
+                      //   url: `https://dc3v8d3l-3000.eun1.devtunnels.ms/flight-search/${bookingDetail.id}`,
+                      // },
+                      {
+                        text: 'Payment Verified ✅',
+                        callback_data: JSON.stringify({
+                          command: '/viewDetails',
+                          language: 'english',
+                        }),
+                      },
+                    ],
+                    // [
+                    //   {
+                    //     text: 'Scan to pay',
+                    //     web_app: { url: `${webApp}` },
+                    //   },
+                    //   {
+                    //     text: '❌ Cancel',
+                    //     callback_data: JSON.stringify({
+                    //       command: '/closedelete',
+                    //       bookingDetailsDbId: Number(
+                    //         bookingDetail.searchResultId,
+                    //       ),
+                    //     }),
+                    //   },
+                    // ],
+                  ],
+                },
+
+                {
+                  chat_id: query.message.chat.id,
+                  message_id: query.message.message_id,
+                },
+              );
+              // fetch flight details
+              const flightDetails =
+                await this.flightSearchService.searchFlightDetails(session);
+
+              if (flightDetails) {
+                console.log(Array.from(flightDetails.flightDeeplinks));
+                await this.wingBot.sendMessage(
+                  session.chat_id.toString(),
+                  `Status: Paid 🟢\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nPrice: 💲${flightDetails.price}`,
+                );
+                // send links
+
+                return await this.wingBot.sendMessage(
+                  process.env.ADMIN_CHAT_Id,
+                  `Status: Paid 🟢\n\nName: ${flightDetails.firstName} ${flightDetails.lastName}\nEmail: ${flightDetails.email}\n\nSummary: ${flightDetails.summary}\n\nAgent name: ${flightDetails.flightDeeplinks[0].agentName}\nlink: ${flightDetails.flightDeeplinks[0].url}\nPrice: 💲${flightDetails.flightDeeplinks[0].price}`,
+                );
+              }
+            }
+            return await this.wingBot.sendMessage(
+              session.chat_id.toString(),
+              'Payment Not verified',
+            );
+          } catch (error) {
+            console.log(error);
+            return;
+          }
+
+        case '/verifyBonkPayment':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          try {
+            const session = await this.databaseService.bookingSession.findFirst(
+              { where: { id: Number(bookingDetailsDbId) } },
+            );
+            if (!session) {
+              return;
+            }
+            // fetch the search Result
+            const verify = await this.flightSearchService.verifyBonkTransaction(
               session.id,
             );
             if (verify) {

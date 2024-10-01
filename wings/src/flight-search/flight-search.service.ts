@@ -341,6 +341,58 @@ export class FlightSearchService {
     }
   };
 
+  generateUSDCPayUrl = async (payload: any) => {
+    console.log(payload);
+    try {
+      // fetch Bonk-usdc pric
+
+      const serviceFee = Number(process.env.SERVICE_FEE); // our charge
+      console.log(serviceFee);
+      const myWallet = new PublicKey(process.env.ADMIN_WALLET);
+      const price = Number(payload.amount) + serviceFee;
+      const recipient = new PublicKey(myWallet);
+      const amount = new BigNumber(price.toFixed(6));
+      const label = 'Wings Flight Bot';
+      const memo = 'Flight Booking';
+      const reference = new Keypair().publicKey;
+      const message = payload.message;
+      const USDCMintAddr = new PublicKey(
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      );
+
+      const url: URL = encodeURL({
+        recipient,
+        amount,
+        splToken: USDCMintAddr,
+        reference,
+        label,
+        message,
+        memo,
+      });
+      if (url) {
+        const ref = reference.toBase58();
+        // update user booking session
+        await this.databaseService.bookingSession.updateMany({
+          where: {
+            chat_id: payload.chatId,
+          },
+          data: {
+            ref,
+            amount: amount.toString(),
+            recipient: recipient.toBase58(),
+            message,
+            deeplink: url.toString(),
+          },
+        });
+        return { url: url.toString(), ref };
+      }
+
+      return;
+    } catch (error) {
+      console.error('this is error :', error);
+    }
+  };
+
   generateBonkPayUrl = async (payload: any) => {
     console.log(payload);
     try {
@@ -407,7 +459,114 @@ export class FlightSearchService {
     }
   };
 
-  verifyTransaction = async (Id: any) => {
+  verifySOLTransaction = async (Id: any) => {
+    try {
+      // check for the users booking sessions
+      const bookingSessions =
+        await this.databaseService.bookingSession.findFirst({
+          where: {
+            id: Id,
+          },
+        });
+      if (!bookingSessions.ref) {
+        return {
+          status: 'error',
+          message: 'Payment request not found',
+        };
+      }
+      // 2 - Establish a Connection to the Solana Cluster
+      const connection = new Connection(this.connection, 'confirmed');
+      console.log('recipient', bookingSessions.recipient);
+      console.log('amount', bookingSessions.amount);
+      console.log('reference', bookingSessions.ref);
+      console.log('message', bookingSessions.message);
+
+      // 3 - Find the transaction reference
+      const found = await findReference(
+        connection,
+        new PublicKey(bookingSessions.ref),
+      );
+
+      const amount = Number(bookingSessions.amount).toFixed(9);
+      // 4 - Validate the transaction
+      const response = await validateTransfer(
+        connection,
+        found.signature,
+        {
+          recipient: new PublicKey(bookingSessions.recipient),
+          amount: new BigNumber(amount),
+          reference: new PublicKey(bookingSessions.ref),
+          //memo
+        },
+        { commitment: 'confirmed' },
+      );
+      // 5 - Delete the payment request from local storage and return the response
+      // if (response) {
+      //   paymentRequests.delete(reference.toBase58());
+      // }
+      console.log(response);
+      return response;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  verifyUSDCTransaction = async (Id: any) => {
+    try {
+      // check for the users booking sessions
+      const bookingSessions =
+        await this.databaseService.bookingSession.findFirst({
+          where: {
+            id: Id,
+          },
+        });
+      if (!bookingSessions.ref) {
+        return {
+          status: 'error',
+          message: 'Payment request not found',
+        };
+      }
+      // 2 - Establish a Connection to the Solana Cluster
+      const connection = new Connection(this.connection, 'confirmed');
+      console.log('recipient', bookingSessions.recipient);
+      console.log('amount', bookingSessions.amount);
+      console.log('reference', bookingSessions.ref);
+      console.log('message', bookingSessions.message);
+
+      // 3 - Find the transaction reference
+      const found = await findReference(
+        connection,
+        new PublicKey(bookingSessions.ref),
+      );
+      const USDCMintAddr = new PublicKey(
+        'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+      );
+      const amount = Number(bookingSessions.amount).toFixed(5);
+      // 4 - Validate the transaction
+      const response = await validateTransfer(
+        connection,
+        found.signature,
+        {
+          recipient: new PublicKey(bookingSessions.recipient),
+          amount: new BigNumber(amount),
+          splToken: USDCMintAddr,
+          reference: new PublicKey(bookingSessions.ref),
+          //memo
+        },
+        { commitment: 'confirmed' },
+      );
+      // 5 - Delete the payment request from local storage and return the response
+      // if (response) {
+      //   paymentRequests.delete(reference.toBase58());
+      // }
+      console.log(response);
+      return response;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  verifyBonkTransaction = async (Id: any) => {
     try {
       // check for the users booking sessions
       const bookingSessions =
