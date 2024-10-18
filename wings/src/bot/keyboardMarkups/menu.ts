@@ -1,6 +1,13 @@
 export const menuMarkup_en = {
   markup: [
     [
+      // {
+      //   text: `✅ Get Verified`,
+      //   callback_data: JSON.stringify({
+      //     command: '/verifyUser',
+      //     language: 'english',
+      //   }),
+      // },
       {
         text: '🔎 Search Flights',
         callback_data: JSON.stringify({
@@ -8,13 +15,13 @@ export const menuMarkup_en = {
           language: 'english',
         }),
       },
-      {
-        text: '🎫 Premium Deals',
-        callback_data: JSON.stringify({
-          command: '/premiumDeals',
-          language: 'english',
-        }),
-      },
+      // {
+      //   text: '🎫 Premium Deals',
+      //   callback_data: JSON.stringify({
+      //     command: '/premiumDeals',
+      //     language: 'english',
+      //   }),
+      // },
     ],
     // [
     //   { text: '🔔 Flight Alerts', callback_data: '/SetAlerts' },

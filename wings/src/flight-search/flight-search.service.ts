@@ -324,11 +324,11 @@ export class FlightSearchService {
               chat_id: payload.chatId,
             },
             data: {
-              ref,
+              Solref: ref,
               amount: amount.toString(),
               recipient: recipient.toBase58(),
               message,
-              deeplink: url.toString(),
+              Soldeeplink: url.toString(),
             },
           });
           return { url: url.toString(), ref };
@@ -377,11 +377,11 @@ export class FlightSearchService {
             chat_id: payload.chatId,
           },
           data: {
-            ref,
+            USDCref: ref,
             amount: amount.toString(),
             recipient: recipient.toBase58(),
             message,
-            deeplink: url.toString(),
+            USDCdeeplink: url.toString(),
           },
         });
         return { url: url.toString(), ref };
@@ -443,11 +443,11 @@ export class FlightSearchService {
               chat_id: payload.chatId,
             },
             data: {
-              ref,
-              amount: amount.toString(),
+              Bonkref: ref,
+              Bonkamount: amount.toString(),
               recipient: recipient.toBase58(),
               message,
-              deeplink: url.toString(),
+              Bonkdeeplink: url.toString(),
             },
           });
           return { url: url.toString(), ref };
@@ -468,7 +468,7 @@ export class FlightSearchService {
             id: Id,
           },
         });
-      if (!bookingSessions.ref) {
+      if (!bookingSessions.Solref) {
         return {
           status: 'error',
           message: 'Payment request not found',
@@ -478,16 +478,16 @@ export class FlightSearchService {
       const connection = new Connection(this.connection, 'confirmed');
       console.log('recipient', bookingSessions.recipient);
       console.log('amount', bookingSessions.amount);
-      console.log('reference', bookingSessions.ref);
+      console.log('reference', bookingSessions.Solref);
       console.log('message', bookingSessions.message);
 
       // 3 - Find the transaction reference
       const found = await findReference(
         connection,
-        new PublicKey(bookingSessions.ref),
+        new PublicKey(bookingSessions.Solref),
       );
 
-      const amount = Number(bookingSessions.amount).toFixed(9);
+      const amount = Number(bookingSessions.Solamount).toFixed(9);
       // 4 - Validate the transaction
       const response = await validateTransfer(
         connection,
@@ -495,7 +495,7 @@ export class FlightSearchService {
         {
           recipient: new PublicKey(bookingSessions.recipient),
           amount: new BigNumber(amount),
-          reference: new PublicKey(bookingSessions.ref),
+          reference: new PublicKey(bookingSessions.Solref),
           //memo
         },
         { commitment: 'confirmed' },
@@ -520,7 +520,7 @@ export class FlightSearchService {
             id: Id,
           },
         });
-      if (!bookingSessions.ref) {
+      if (!bookingSessions.USDCref) {
         return {
           status: 'error',
           message: 'Payment request not found',
@@ -530,18 +530,18 @@ export class FlightSearchService {
       const connection = new Connection(this.connection, 'confirmed');
       console.log('recipient', bookingSessions.recipient);
       console.log('amount', bookingSessions.amount);
-      console.log('reference', bookingSessions.ref);
+      console.log('reference', bookingSessions.USDCref);
       console.log('message', bookingSessions.message);
 
       // 3 - Find the transaction reference
       const found = await findReference(
         connection,
-        new PublicKey(bookingSessions.ref),
+        new PublicKey(bookingSessions.USDCref),
       );
       const USDCMintAddr = new PublicKey(
         'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
       );
-      const amount = Number(bookingSessions.amount).toFixed(5);
+      const amount = Number(bookingSessions.USDCamount).toFixed(5);
       // 4 - Validate the transaction
       const response = await validateTransfer(
         connection,
@@ -550,7 +550,7 @@ export class FlightSearchService {
           recipient: new PublicKey(bookingSessions.recipient),
           amount: new BigNumber(amount),
           splToken: USDCMintAddr,
-          reference: new PublicKey(bookingSessions.ref),
+          reference: new PublicKey(bookingSessions.USDCref),
           //memo
         },
         { commitment: 'confirmed' },
@@ -575,7 +575,7 @@ export class FlightSearchService {
             id: Id,
           },
         });
-      if (!bookingSessions.ref) {
+      if (!bookingSessions.Bonkref) {
         return {
           status: 'error',
           message: 'Payment request not found',
@@ -585,18 +585,18 @@ export class FlightSearchService {
       const connection = new Connection(this.connection, 'confirmed');
       console.log('recipient', bookingSessions.recipient);
       console.log('amount', bookingSessions.amount);
-      console.log('reference', bookingSessions.ref);
+      console.log('reference', bookingSessions.Bonkref);
       console.log('message', bookingSessions.message);
 
       // 3 - Find the transaction reference
       const found = await findReference(
         connection,
-        new PublicKey(bookingSessions.ref),
+        new PublicKey(bookingSessions.Bonkref),
       );
       const bonkMintAddr = new PublicKey(
         'DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263',
       );
-      const amount = Number(bookingSessions.amount).toFixed(4);
+      const amount = Number(bookingSessions.Bonkamount).toFixed(4);
       // 4 - Validate the transaction
       const response = await validateTransfer(
         connection,
@@ -605,7 +605,7 @@ export class FlightSearchService {
           recipient: new PublicKey(bookingSessions.recipient),
           amount: new BigNumber(amount),
           splToken: bonkMintAddr,
-          reference: new PublicKey(bookingSessions.ref),
+          reference: new PublicKey(bookingSessions.Bonkref),
           //memo
         },
         { commitment: 'confirmed' },

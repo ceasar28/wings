@@ -14,6 +14,7 @@ import { DatabaseService } from 'src/database/database.service';
 import { Prisma } from '@prisma/client';
 import { FlightSearchService } from 'src/flight-search/flight-search.service';
 import * as QRCode from 'qrcode';
+// import { Reclaim } from '@reclaimprotocol/js-sdk'; // for zkp
 
 @Injectable()
 export class BotService {
@@ -111,6 +112,7 @@ export class BotService {
             chat_id: msg.chat.id,
           },
         });
+      console.log('booking session', bookingDetailSession);
       console.log('userInput ', msg);
       // check if it is booking details
       if (bookingDetailSession) {
@@ -1083,6 +1085,10 @@ export class BotService {
           await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           return await this.defaultMenuLyout(query.message.chat.id);
 
+        case '/verifyUser':
+          await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
+          return await this.verifyUser(query.message.chat.id);
+
         case '/settings':
           await this.wingBot.sendChatAction(query.message.chat.id, 'typing');
           return await this.sendAllCountries(query.message.chat.id);
@@ -1562,7 +1568,7 @@ export class BotService {
                           [
                             {
                               text: 'deeplink',
-                              url: `${process.env.SERVER_URL}${bookingDetail.id}`,
+                              url: `${process.env.SERVER_URL}${bookingDetail.id}?token=sol`,
                             },
                             {
                               text: '✅ Verify',
@@ -1627,7 +1633,7 @@ export class BotService {
                           [
                             {
                               text: 'deeplink',
-                              url: `${process.env.SERVER_URL}${bookingDetail.id}`,
+                              url: `${process.env.SERVER_URL}${bookingDetail.id}?token=bonk`,
                             },
                             {
                               text: '✅ Verify',
@@ -1692,7 +1698,7 @@ export class BotService {
                           [
                             {
                               text: 'deeplink',
-                              url: `${process.env.SERVER_URL}${bookingDetail.id}`,
+                              url: `${process.env.SERVER_URL}${bookingDetail.id}?token=usdc`,
                             },
                             {
                               text: '✅ Verify',
@@ -2075,7 +2081,7 @@ export class BotService {
       await this.wingBot.sendMessage(
         chat_id,
         `To begin your seamless travel booking experience, please select one of the options below: 👇`,
-        { reply_markup: menuMarkup },
+        { reply_markup: menuMarkup, parse_mode: 'HTML' },
       );
       return;
     } catch (error) {
@@ -2610,6 +2616,41 @@ Receive more frequent updates on ticket prices.\n\n🤘 Be the first to receive 
               emailPrompt.message_id,
             ],
           }),
+        });
+        return;
+      }
+      return;
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // verify user
+  verifyUser = async (chatId) => {
+    try {
+      const departureDatePromptId = await this.wingBot.sendMessage(
+        chatId,
+        '📅 Specify the date of departure- "DD/MM/YYYY" (e.g: 20/06/2024).',
+        {
+          reply_markup: {
+            force_reply: true,
+          },
+        },
+      );
+      const session = await this.databaseService.session.findFirst({
+        where: { chat_id: chatId },
+      });
+      if (session) {
+        await this.databaseService.session.updateMany({
+          where: { chat_id: chatId },
+          data: {
+            departureDatePromptId: JSON.stringify({
+              messageId: [
+                ...JSON.parse(session.departureDatePromptId)['messageId'],
+                departureDatePromptId.message_id,
+              ],
+            }),
+          },
         });
         return;
       }
